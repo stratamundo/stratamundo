@@ -101,6 +101,10 @@ export interface ActivitySubmissionInput {
   source_site?: string | null
   duration_minutes?: number | null
   rationale?: string | null
+  /** Optional citation/evidence-base the contributor offered (gap G,
+   *  2026-05-15). Persisted but NOT shown to the AI vet — the vet judges
+   *  the activity on its own merits, not on a self-asserted citation. */
+  research_basis?: string | null
   standard_ids: string[]
   contributor_name: string
   contributor_email: string

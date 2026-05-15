@@ -2,6 +2,14 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ReviewActions from './ReviewActions'
 import { standardName } from '@/lib/standard-labels'
+import misconceptionsRaw from '@/content/fractions-misconceptions.json'
+
+const misconceptions = misconceptionsRaw as unknown as {
+  misconceptions: { id: string; name: string }[]
+}
+function misconceptionName(id: string): string {
+  return misconceptions.misconceptions.find((m) => m.id === id)?.name ?? id
+}
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -116,11 +124,24 @@ export default async function AdminSubmissionPage({ params, searchParams }: Page
             <Field label="Source" body={row.source_site ?? '—'} />
           </div>
           {row.rationale && <Field label="Why it works" body={row.rationale} />}
+          {row.research_basis && (
+            <Field label="Research basis (contributor-supplied)" body={row.research_basis} />
+          )}
           <Field
             label="Standards"
             body={(row.standard_ids as string[])
               .map((sid) => `${standardName(sid)} (${sid})`)
               .join(' · ')}
+          />
+          <Field
+            label="Misconceptions (AI-suggested)"
+            body={
+              Array.isArray(row.misconception_ids) && row.misconception_ids.length > 0
+                ? (row.misconception_ids as string[])
+                    .map((mid) => `${misconceptionName(mid)} (${mid})`)
+                    .join(' · ')
+                : '— (AI did not map this activity to any tracked misconception)'
+            }
           />
           <Field
             label="Contributor"

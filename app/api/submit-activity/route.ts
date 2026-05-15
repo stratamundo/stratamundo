@@ -27,6 +27,7 @@ const MISCONCEPTIONS_FOR_VET = misconceptions.misconceptions.map((m) => ({
   id: m.id,
   name: m.name,
 }))
+const VALID_MISCONCEPTION_IDS = new Set(misconceptions.misconceptions.map((m) => m.id))
 const VALID_MODALITIES = new Set([
   'video',
   'manipulative',
@@ -43,6 +44,7 @@ interface SubmitBody {
   source_site?: unknown
   duration_minutes?: unknown
   rationale?: unknown
+  research_basis?: unknown
   standard_ids?: unknown
   contributor_name?: unknown
   contributor_email?: unknown
@@ -93,6 +95,10 @@ function validate(body: SubmitBody): { ok: true; data: ActivitySubmissionInput }
     typeof body.rationale === 'string' && body.rationale.trim().length > 0
       ? body.rationale.trim()
       : null
+  const researchBasis =
+    typeof body.research_basis === 'string' && body.research_basis.trim().length > 0
+      ? body.research_basis.trim().slice(0, 280)
+      : null
 
   return {
     ok: true,
@@ -104,6 +110,7 @@ function validate(body: SubmitBody): { ok: true; data: ActivitySubmissionInput }
       source_site: sourceSite,
       duration_minutes: duration,
       rationale,
+      research_basis: researchBasis,
       standard_ids: inputStandardIds,
       contributor_name: body.contributor_name.trim(),
       contributor_email: body.contributor_email.trim().toLowerCase(),
@@ -138,6 +145,7 @@ export async function POST(req: NextRequest) {
       source_site: submission.source_site,
       duration_minutes: submission.duration_minutes,
       rationale: submission.rationale,
+      research_basis: submission.research_basis ?? null,
       standard_ids: submission.standard_ids,
       contributor_name: submission.contributor_name,
       contributor_email: submission.contributor_email,
@@ -187,6 +195,9 @@ export async function POST(req: NextRequest) {
             VALID_STANDARD_IDS.has(id),
           )
 
+    const finalMisconceptionIds = (vetResult.suggested_misconception_ids ?? [])
+      .filter((id) => VALID_MISCONCEPTION_IDS.has(id))
+
     await supabase
       .from('activity_submissions')
       .update({
@@ -196,6 +207,7 @@ export async function POST(req: NextRequest) {
         ai_vet_flags: vetResult.flags,
         ai_vet_at: new Date().toISOString(),
         standard_ids: finalStandardIds,
+        misconception_ids: finalMisconceptionIds,
       })
       .eq('id', submissionId)
 

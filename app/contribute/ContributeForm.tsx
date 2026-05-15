@@ -35,6 +35,7 @@ export default function ContributeForm({ initialStandardId }: Props) {
   const [url, setUrl] = useState('')
   const [sourceSite, setSourceSite] = useState('')
   const [duration, setDuration] = useState('')
+  const [researchBasis, setResearchBasis] = useState('')
   // Standards are no longer collected from the contributor — the AI vet
   // infers them from the description. We retain the standard_ids array
   // (initialized empty, or pre-populated when the contributor came in via
@@ -89,6 +90,7 @@ export default function ContributeForm({ initialStandardId }: Props) {
         url: normalizedUrl,
         source_site: sourceSite.trim() || null,
         duration_minutes: duration ? Number(duration) : null,
+        research_basis: researchBasis.trim() || null,
         standard_ids: standardIds,
         contributor_name: contributorName.trim(),
         contributor_email: contributorEmail.trim(),
@@ -145,6 +147,7 @@ export default function ContributeForm({ initialStandardId }: Props) {
           setUrl('')
           setSourceSite('')
           setDuration('')
+          setResearchBasis('')
           setStandardIds(initialStandardId ? [initialStandardId] : [])
         }}
         onBackToEdit={() => {
@@ -279,6 +282,21 @@ export default function ContributeForm({ initialStandardId }: Props) {
           onChange={(e) => setDuration(e.target.value)}
           className={`${inputCls} max-w-[10rem]`}
           style={{ fontFamily: 'var(--font-fraunces)' }}
+        />
+      </FormField>
+
+      <FormField
+        label="Research basis"
+        hint="Optional. The study, practice guide, or evidence base behind this activity. e.g. 'IES What Works Clearinghouse — Developing Effective Fractions Instruction K–8, Recommendation 2.' Helps build credibility for the library."
+      >
+        <textarea
+          value={researchBasis}
+          onChange={(e) => setResearchBasis(e.target.value.slice(0, 280))}
+          placeholder="(optional) e.g. Cramer et al. 2017, Teaching Children Mathematics — third-grade number-line instruction."
+          rows={2}
+          className={`${inputCls} resize-y min-h-[56px]`}
+          style={{ fontFamily: 'var(--font-fraunces)' }}
+          maxLength={280}
         />
       </FormField>
 
