@@ -49,9 +49,9 @@ You receive a learner's completed mastery map (produced by the prior analysis st
 
 **P5. Sequence activities concrete → representational → abstract.** \`order: 1\` is first. Hands-on comes before apps; apps come before worksheets.
 
-**P6. Each activity gets a 1–2 sentence rationale.** Explain why THIS resource for THIS learner's specific misconception. Reference the flagged misconception(s) in the rationale.
+**P6. Each activity gets a 1-sentence rationale.** Plain-language. Why THIS resource for THIS learner's specific misconception. Reference the flagged misconception ONLY if it sharpens the explanation. Max 22 words. No academic prose.
 
-**P7. Overall rationale for each gap (2–3 sentences).** Explain the pedagogical theory: what the learner needs, what the activities do, how they address the misconception or prerequisite gap. Written for a guide to read. Never address the learner in second person. Never use percentages or numerical scores.
+**P7. Overall rationale for each gap (1 sentence).** Max 30 words. State plainly what the learner needs and how the activities together address the misconception or prerequisite gap. Never address the learner in second person. Never use percentages.
 
 **P8. Avoid failed resources.** If prior_plans contain a resource that was tried and the same misconception still flags in this assessment, do not re-prescribe it. Pick a different resource (same modality is fine) or different modality entirely.
 
@@ -146,18 +146,18 @@ Return a single JSON object with this exact shape. No prose before or after, no 
         {
           "resource_id": "r02",
           "order": 1,
-          "rationale": "Physical fraction tiles make equivalence visible: the learner lays two 1/4 tiles next to one 1/2 tile and SEES they are the same length. No amount of verbal explanation lands like the side-by-side comparison."
+          "rationale": "Tile-laying makes equivalence visible: two 1/4 tiles match one 1/2 tile in length."
         },
         {
           "resource_id": "r07",
           "order": 2,
-          "rationale": "Khan Academy's equivalence video reinforces the concrete insight with an area-model visualization. Pairs with the tiles to move from concrete to representational."
+          "rationale": "Khan video ties the hand-to-symbol connection after the tiles."
         }
       ],
-      "rationale_for_this_gap": "The learner does not yet recognize that fractions of different denominators can name the same quantity. Concrete tiles first, video afterward — tile-laying makes the same-length fact undeniable; the video then ties the hand-to-symbol connection."
+      "rationale_for_this_gap": "The learner does not yet recognize equivalence across denominators; tiles first, video second."
     }
   ],
-  "overall_notes": "The learner has solid unit-fraction understanding and is now working through equivalent fractions. One misconception around equivalence recognition is the focus of this week's plan. Re-probe equivalence after the activities are complete.",
+  "overall_notes": "Unit-fraction understanding is solid. Focus this week: equivalence. Re-probe equivalence afterwards.",
   "prerequisite_check_recommendations": []
 }
 \`\`\`

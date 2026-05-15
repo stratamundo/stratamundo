@@ -4,33 +4,38 @@ import { createClient } from '@/lib/supabase/server'
 import {
   PLAN_ARCHITECT_SYSTEM_PROMPT,
 } from '@/lib/plan-architect-prompt'
+import {
+  noPlanNeeded,
+  emptyPlanContent,
+  relevantMisconceptions,
+  relevantCoherenceNodes,
+  type MasteryMap,
+} from '@/lib/cost-savings'
+import { getAllProblems } from '@/lib/problem-selection'
 import coherenceMapRaw from '@/content/coherence-map-fractions.json'
 import misconceptionsRaw from '@/content/fractions-misconceptions.json'
 import resourcesRaw from '@/content/fractions-resources.json'
 
 /**
- * Plan Architect — single Messages API call to Sonnet 4.6 with adaptive
- * thinking and prompt caching. Replaces the previous Managed Agents
- * implementation, which paid for sandbox compute the Plan Architect did
- * not use (no code execution, no file edits, no web tools).
+ * Plan Architect — Sonnet 4.6 with prompt caching.
  *
- * Caching strategy:
- *   - System prompt has cache_control on its last block. The system prompt
- *     is identical across every plan generation.
- *   - The user message starts with a large invariant TAXONOMY block
- *     (resource library, misconception taxonomy, coherence map) carrying
- *     its own cache_control breakpoint. This block also never changes.
- *   - The volatile per-learner data (mastery map, prior plans) lives at
- *     the end of the user message, after the last cache_control. It is
- *     the only portion that pays full input price each call.
+ * Cost levers in this route:
+ *   - Lever 3: skip the AI call entirely when the mastery map has no
+ *     misconceptions or partial-mastery standards. Stores an empty-plan
+ *     stub so the report page renders cleanly.
+ *   - Lever 2: trim the misconception taxonomy and coherence map to
+ *     only what's referenced by flagged standards.
+ *   - Lever 4: max_tokens dropped from 16,000 → 6,000 (tighter prompts
+ *     keep outputs short).
  *
- * On a warm cache, ~10K of the ~13K input tokens are served from cache at
- * 0.1× price, and only the per-learner mastery map + prior plans pay full
- * input price. Marginal cost per plan drops to ~$0.04 (Sonnet 4.6).
+ * Caching:
+ *   - System prompt: ephemeral cache.
+ *   - Resource library + trimmed taxonomy + trimmed coherence map: own
+ *     cache breakpoint. (Resource library is invariant; taxonomy/coherence
+ *     vary by which standards were flagged but cache keys are content-
+ *     hashed so common shapes still hit warm.)
  */
 
-// Sonnet 4.6 plan generation typically completes in 15–40 seconds.
-// Vercel Hobby caps server functions at 60s; Pro at 300s.
 export const maxDuration = 60
 
 interface PriorPlanRow {
@@ -77,6 +82,58 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // ------------------------------------------------------------------
+  // Lever 3 — skip the AI entirely when nothing needs a plan.
+  // ------------------------------------------------------------------
+  const masteryMap = assessment.mastery_map as MasteryMap
+  if (noPlanNeeded(masteryMap)) {
+    // Save a stub plan so the report page can read it without special-casing.
+    await supabase
+      .from('plans')
+      .update({ status: 'superseded' })
+      .eq('learner_id', assessment.learner_id)
+      .eq('status', 'active')
+
+    const { data: stubPlan, error: stubErr } = await supabase
+      .from('plans')
+      .insert({
+        learner_id: assessment.learner_id,
+        assessment_id: assessment.id,
+        plan_content: emptyPlanContent(),
+        status: 'active',
+      })
+      .select('id, generated_at')
+      .single()
+    if (stubErr) {
+      return NextResponse.json({ error: stubErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      plan_id: stubPlan.id,
+      generated_at: stubPlan.generated_at,
+      plan_content: emptyPlanContent(),
+      skipped: true,
+      reason: 'no_gaps_in_mastery_map',
+    })
+  }
+
+  // ------------------------------------------------------------------
+  // Lever 2 — trim taxonomy / coherence to flagged standards only.
+  // ------------------------------------------------------------------
+  const flaggedStandardIds = Object.entries(masteryMap.standards ?? {})
+    .filter(([, v]) => v.state === 'misconception' || v.state === 'working')
+    .map(([k]) => k)
+
+  // Use the problems associated with flagged standards to scope misconceptions.
+  // (We don't have per-assessment responses here, so we infer relevant
+  // problems from the standard list.)
+  const allProblems = getAllProblems()
+  const relevantProblems = allProblems.filter((p) =>
+    p.ccss_standard_ids.some((sid) => flaggedStandardIds.includes(sid)),
+  )
+  const trimmedMisconceptions = relevantMisconceptions(relevantProblems, misconceptionsRaw)
+  const trimmedCoherence = relevantCoherenceNodes(flaggedStandardIds, coherenceMapRaw)
+
   const { data: priorPlans } = await supabase
     .from('plans')
     .select('id, assessment_id, generated_at, plan_content')
@@ -86,24 +143,22 @@ export async function POST(req: NextRequest) {
 
   const client = new Anthropic({ apiKey })
 
-  // The invariant block — taxonomy data the model needs but that does not
-  // change between plan generations. Cache aggressively.
-  const taxonomyBlock = `# Reference data (invariant across all plan generations)
+  // Invariant block — resource library never changes; trimmed taxonomy/coherence vary.
+  const referenceBlock = `# Reference data
 
-## Resource library
+## Resource library (invariant)
 ${JSON.stringify(resourcesRaw, null, 2)}
 
-## Misconception taxonomy
-${JSON.stringify(misconceptionsRaw, null, 2)}
+## Misconception taxonomy (only entries referenced by flagged standards)
+${JSON.stringify(trimmedMisconceptions, null, 2)}
 
-## Coherence map subgraph
-${JSON.stringify(coherenceMapRaw, null, 2)}`
+## Coherence map subgraph (flagged standards + one-hop prerequisites)
+${JSON.stringify(trimmedCoherence, null, 2)}`
 
-  // The volatile block — per-learner data. Different on every call.
   const learnerBlock = `# Per-learner data
 
-## Mastery map (just produced for this learner)
-${JSON.stringify(assessment.mastery_map, null, 2)}
+## Mastery map
+${JSON.stringify(masteryMap, null, 2)}
 
 ## Prior plans for this learner
 ${JSON.stringify((priorPlans as PriorPlanRow[] | null) ?? [], null, 2)}
@@ -114,7 +169,7 @@ Return the plan as JSON matching the schema in your system instructions. No mark
   try {
     response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 16000,
+      max_tokens: 6000,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'medium' },
       system: [
@@ -130,7 +185,7 @@ Return the plan as JSON matching the schema in your system instructions. No mark
           content: [
             {
               type: 'text',
-              text: taxonomyBlock,
+              text: referenceBlock,
               cache_control: { type: 'ephemeral' },
             },
             {
@@ -146,9 +201,6 @@ Return the plan as JSON matching the schema in your system instructions. No mark
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
-  // Extract the first text block. The model is instructed to return ONLY
-  // JSON; thinking blocks (when adaptive thinking activates) precede the
-  // text block but are filtered out here.
   const textBlock = response.content.find((b) => b.type === 'text')
   if (!textBlock || textBlock.type !== 'text') {
     return NextResponse.json(
