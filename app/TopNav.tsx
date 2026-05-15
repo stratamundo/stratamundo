@@ -37,6 +37,7 @@ export default function TopNav() {
           style={{ fontFamily: 'var(--font-cinzel)', letterSpacing: '0.18em' }}
         >
           <NavLink href="/" label="Home" />
+          <NavLink href="/vision" label="Vision" />
           <NavLink href="/resume" label="My voyage" />
           <NavLink href="/contribute" label="Contribute" />
           <NavLink href="/methodology" label="Methods" />
