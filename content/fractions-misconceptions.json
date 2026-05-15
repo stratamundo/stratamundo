@@ -2,12 +2,13 @@
   "_meta": {
     "concept": "fractions",
     "grade_band": "3-4",
-    "draft_status": "initial draft by Claude Code, Thu Apr 23 2026 — requires curator review for pedagogical accuracy",
-    "research_basis": "Synthesized from Van de Walle 'Elementary and Middle School Mathematics', Common Core Progressions documents for fractions (3-5), and published research on rational number misconceptions (Behr, Lesh, Post; Mack; Siegler). Nothing copied verbatim.",
+    "draft_status": "initial draft by Claude Code, Thu Apr 23 2026 — requires curator review for pedagogical accuracy. Extended 2026-05-15 with two misconceptions named directly in the 3-5 Fractions Progression (m05b, m09) and one annotation on m03; see docs/research/misconception-progressions-comparison.md for full traceability.",
+    "research_basis": "Synthesized from Van de Walle 'Elementary and Middle School Mathematics', published research on rational number misconceptions (Behr, Lesh, Post; Mack; Siegler), and — for m05b, m09, and the m03 annotation — verbatim from the Draft 3-5 Progression on Number and Operations — Fractions (McCallum et al., achievethecore.org/page/254). Quotes are verbatim where attributed; rest of the file is synthesized, not copied.",
     "notes_for_barbara": [
       "Each misconception has: id, name, short_description, manifestation (how it shows up in student work), grade_onset (when it typically appears), diagnostic_signals (what specific wrong answers or work patterns reveal it), prerequisite_links (which prerequisite gaps can masquerade as this misconception).",
       "prerequisite_links are what the Plan Architect uses for differential diagnosis (spec §4.4).",
-      "8 misconceptions drafted — spec said 6-8. Drop m08 if you want only 7; it partially overlaps with m04."
+      "10 misconceptions: 8 from the initial Apr 23 draft plus m05b (equal-parts-must-look-identical) and m09 (over-emphasis on simplification) added 2026-05-15 from the published 3-5 Fractions Progression. Per-edit traceability lives in docs/research/misconception-progressions-comparison.md.",
+      "Scope-check pending on m02 (add num/den separately): this misconception surfaces when kids add fractions with unlike denominators, which is 5.NF territory and outside SM's current 3.NF+4.NF probe scope. Verify against fractions-problem-bank.json whether the diagnostic can actually trigger m02; if not, retire it until the 5.NF expansion."
     ]
   },
   "misconceptions": [
@@ -54,7 +55,8 @@
       ],
       "prerequisite_links": [
         "p03_part_whole_beyond_one (understanding that you can have more than a whole, divided into parts)"
-      ]
+      ],
+      "_progressions_note": "The 3-5 Fractions Progression (p. 8) frames this as a teaching trap, not just a kid belief: 'there is no need to introduce \"proper fractions\" and \"improper fractions\" initially; 5/3 is what you get by combining 5 parts when a whole is partitioned into 3 equal parts.' When m03 fires, the Plan Architect should consider that the fix may be at the instructional layer (retire the proper/improper framing) rather than at the kid-cognition layer."
     },
     {
       "id": "m04_equivalent_fractions_unrecognized",
@@ -85,6 +87,22 @@
       "prerequisite_links": [
         "p05_equal_partitioning (this is both a fractions misconception and a prerequisite-gap candidate — the Plan Architect should flag it as a possible prerequisite issue)"
       ]
+    },
+    {
+      "id": "m05b_equal_parts_must_look_identical",
+      "name": "Equal parts must look identical",
+      "short_description": "Learner accepts equal-area parts only when the pieces also look the same shape. Rejects valid partitions where the pieces have equal area but different shapes or orientations.",
+      "manifestation": "Asked whether a square cut into 4 equal-area but differently-shaped pieces shows fourths, says no. Accepts 4 identical strips as fourths but balks at 4 equal-area pieces with different shapes (e.g., 2 squares + 2 rectangles of equal area). Often co-occurs with m05 (unequal partitioning); m05 fades as kids understand 'equal,' but this one persists when 'equal' has been taught as 'same shape and size' instead of 'equal in measurement.'",
+      "grade_onset": "Grade 3, often co-occurring with m05. Distinguishable from m05 once kids are partitioning roughly accurately — m05b is the rejection of valid partitions, not the acceptance of invalid ones.",
+      "diagnostic_signals": [
+        "Rejects a square cut into 4 equal-area but differently-shaped pieces as 'not fourths.'",
+        "Accepts only congruent partitions; declines partitions where pieces have different shapes even when areas match.",
+        "Show-your-work or verbal: 'these pieces don't look the same' or 'they're not the same shape.'"
+      ],
+      "prerequisite_links": [
+        "p05_equal_partitioning (the same prerequisite as m05; the gap here is in the definition of 'equal,' not in the partitioning skill itself)"
+      ],
+      "_progressions_note": "Named directly in the 3-5 Fractions Progression (p. 8): students need to extend 'equal parts' from an intuitive notion of congruence ('same size and same shape' or 'matches exactly') to the more precise meaning 'parts with equal measurements.'"
     },
     {
       "id": "m06_whole_irrelevant",
@@ -130,6 +148,22 @@
       "prerequisite_links": [
         "p04_multiplicative_reasoning (core gap: multiplicative vs additive thinking about fractions)"
       ]
+    },
+    {
+      "id": "m09_over_simplification",
+      "name": "Fractions must always be in lowest terms",
+      "short_description": "Learner believes a fraction is wrong or incomplete if it isn't simplified. Treats 2/4 as an error and 1/2 as the only correct form.",
+      "manifestation": "Asked to compare 2/4 and 1/2, may say 2/4 is wrong or 'not a real fraction.' Refuses to accept answers in non-simplified form (e.g., writes 4/8 as the result of a problem, marks own answer wrong, rewrites to 1/2). May avoid generating equivalent fractions like 6/8 because they are 'not in lowest terms.' Often introduced or reinforced by instruction that emphasizes 'always simplify' as a correctness rule.",
+      "grade_onset": "Grade 4-5, when simplification procedures are taught. Often teacher-induced rather than a spontaneous kid misconception — which is why the diagnostic should not penalize the kid but should flag the instructional layer.",
+      "diagnostic_signals": [
+        "Marks 2/4, 3/6, 4/8 as wrong or as 'not really fractions.'",
+        "When asked to generate equivalent fractions for 1/2, gives only 1/2 itself.",
+        "Show-your-work: 'I have to simplify,' 'this isn't done yet,' or 'this is the same as 1/2' (as if 1/2 supersedes 2/4)."
+      ],
+      "prerequisite_links": [
+        "p02_equivalent_fractions (the fix is recognizing that 2/4 and 1/2 are equal — both are correct, neither is 'more right')"
+      ],
+      "_progressions_note": "Named directly in the 3-5 Fractions Progression (p. 12): 'There is no mathematical reason why fractions must be written in simplified form, although it may be convenient to do so in some cases.' The Plan Architect should not recommend activities that gate correctness on simplified form."
     }
   ],
   "prerequisites": [
