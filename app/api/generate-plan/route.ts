@@ -118,6 +118,53 @@ export async function POST(req: NextRequest) {
   }
 
   // ------------------------------------------------------------------
+  // Community-library merge — fetch human-approved submissions and
+  // normalize them into the curated-resource shape so the Plan Architect
+  // can pick from them alongside the curated library. Only include items
+  // that carry at least one misconception tag, since untagged ones have
+  // no signal for misconception-driven selection.
+  // ------------------------------------------------------------------
+  const { data: communityApproved } = await supabase
+    .from('activity_submissions')
+    .select(
+      'id, title, description, modality, url, source_site, duration_minutes, standard_ids, misconception_ids, research_basis, contributor_name',
+    )
+    .eq('status', 'human_approved')
+    .limit(200)
+
+  interface CommunityRow {
+    id: string
+    title: string
+    description: string
+    modality: string
+    url: string | null
+    source_site: string | null
+    duration_minutes: number | null
+    standard_ids: string[] | null
+    misconception_ids: string[] | null
+    research_basis: string | null
+    contributor_name: string
+  }
+  const communityResources = ((communityApproved as CommunityRow[] | null) ?? [])
+    .filter((c) => Array.isArray(c.misconception_ids) && c.misconception_ids.length > 0)
+    .map((c) => ({
+      // Prefix the id so it can't collide with curated `r##` ids.
+      id: `c_${c.id.slice(0, 8)}`,
+      source: 'community' as const,
+      title: c.title,
+      modality: c.modality,
+      source_site: c.source_site ?? c.contributor_name,
+      url: c.url,
+      duration_minutes: c.duration_minutes,
+      grade_band: '3-4',
+      misconception_ids: c.misconception_ids ?? [],
+      standard_ids: c.standard_ids ?? [],
+      notes: c.description,
+      research_basis: c.research_basis,
+      contributor_name: c.contributor_name,
+    }))
+
+  // ------------------------------------------------------------------
   // Lever 2 — trim taxonomy / coherence to flagged standards only.
   // ------------------------------------------------------------------
   const flaggedStandardIds = Object.entries(masteryMap.standards ?? {})
@@ -143,11 +190,32 @@ export async function POST(req: NextRequest) {
 
   const client = new Anthropic({ apiKey })
 
-  // Invariant block — resource library never changes; trimmed taxonomy/coherence vary.
-  const referenceBlock = `# Reference data
+  // Truly invariant block — curated resource library only. Kept in its own
+  // cache prefix so it stays warm even when the community list changes.
+  const curatedReferenceBlock = `# Reference data (curated, invariant)
 
-## Resource library (invariant)
-${JSON.stringify(resourcesRaw, null, 2)}
+## Resource library — curated
+The curated library is the canonical set of activities Barbara hand-picked.
+Each entry has a stable id (e.g. \`r02\`) you reference in your output.
+
+${JSON.stringify(resourcesRaw, null, 2)}`
+
+  // Variable block — community-approved activities + trimmed taxonomy +
+  // trimmed coherence. The community list changes as Barbara approves
+  // submissions, so this block invalidates separately from the curated
+  // prefix. The taxonomy/coherence vary by which standards were flagged.
+  const dynamicReferenceBlock = `# Reference data (varies per call)
+
+## Resource library — community-approved (treat equally with curated)
+These activities were proposed by guides/teachers/parents, AI-vetted, and
+human-approved. Their ids start with \`c_\`. The misconception_ids on each
+entry are AI-suggested at submission time. They carry a \`source: "community"\`
+field for provenance, and may include a \`contributor_name\` and
+\`research_basis\`. Treat them on equal footing with curated activities
+when selecting for a priority gap; pick on misconception match and
+modality balance, not on source.
+
+${JSON.stringify(communityResources, null, 2)}
 
 ## Misconception taxonomy (only entries referenced by flagged standards)
 ${JSON.stringify(trimmedMisconceptions, null, 2)}
@@ -185,7 +253,12 @@ Return the plan as JSON matching the schema in your system instructions. No mark
           content: [
             {
               type: 'text',
-              text: referenceBlock,
+              text: curatedReferenceBlock,
+              cache_control: { type: 'ephemeral' },
+            },
+            {
+              type: 'text',
+              text: dynamicReferenceBlock,
               cache_control: { type: 'ephemeral' },
             },
             {

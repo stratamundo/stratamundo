@@ -47,18 +47,19 @@ interface MasteryMap {
   overall_notes?: string
 }
 
-interface ResourceRow {
+export interface ResourceRow {
   id: string
   title: string
   modality: string
   source_site?: string
   url?: string | null
   duration_minutes?: number
+  /** Marker for community-contributed entries (id prefix \`c_\`). Lets the
+   *  UI badge them differently from curated rows when we want to. */
+  source?: 'community'
+  contributor_name?: string
 }
-const resources = resourcesRaw as unknown as { resources: ResourceRow[] }
-function resourceById(id: string): ResourceRow | undefined {
-  return resources.resources.find((r) => r.id === id)
-}
+const curatedResources = resourcesRaw as unknown as { resources: ResourceRow[] }
 
 interface Misconception {
   id: string
@@ -113,6 +114,9 @@ interface Props {
   planId: string | null
   assessmentId: string | null
   learnerId: string
+  /** Approved community submissions (id-prefix \`c_\`). Merged into the
+   *  resource lookup so the plan agent's community picks render correctly. */
+  communityResources?: ResourceRow[]
 }
 
 export default function MasteryVoyage({
@@ -121,7 +125,15 @@ export default function MasteryVoyage({
   planId,
   assessmentId,
   learnerId,
+  communityResources = [],
 }: Props) {
+  // Build the unified resource lookup: curated + approved community.
+  const resourceById = (id: string): ResourceRow | undefined => {
+    return (
+      curatedResources.resources.find((r) => r.id === id) ??
+      communityResources.find((r) => r.id === id)
+    )
+  }
   // Sandbags hanging from the balloon = unique misconceptions detected.
   // For now, all sandbags hang. Once a focused-probe re-assessment clears a
   // misconception, that sandbag can render as "dropped".
@@ -163,6 +175,7 @@ export default function MasteryVoyage({
           plan={plan}
           planId={planId}
           flatActivities={flatActivities}
+          resourceById={resourceById}
         />
       )}
 
@@ -315,10 +328,12 @@ function ActivitiesSection({
   plan,
   planId,
   flatActivities,
+  resourceById,
 }: {
   plan: PlanContent | null
   planId: string | null
   flatActivities: FlatActivity[]
+  resourceById: (id: string) => ResourceRow | undefined
 }) {
   return (
     <section className="rounded-sm border-2 border-brass-deep/40 bg-paper p-5 flex flex-col gap-4">

@@ -61,6 +61,36 @@ export default async function LearnerDashboardPage(
     }
   }
 
+  // Community resources — the Plan Architect can pick approved community
+  // submissions alongside curated. Fetch them and pass down so the report
+  // can resolve `c_*` ids when rendering activity tiles.
+  interface CommunityRow {
+    id: string
+    title: string
+    modality: string
+    url: string | null
+    source_site: string | null
+    duration_minutes: number | null
+    contributor_name: string
+  }
+  const { data: communityRows } = await supabase
+    .from('activity_submissions')
+    .select('id, title, modality, url, source_site, duration_minutes, contributor_name')
+    .eq('status', 'human_approved')
+    .limit(200)
+  const communityResources = ((communityRows as CommunityRow[] | null) ?? []).map(
+    (c) => ({
+      id: `c_${c.id.slice(0, 8)}`,
+      title: c.title,
+      modality: c.modality,
+      source_site: c.source_site ?? c.contributor_name,
+      url: c.url,
+      duration_minutes: c.duration_minutes ?? undefined,
+      source: 'community' as const,
+      contributor_name: c.contributor_name,
+    }),
+  )
+
   return (
     <main className="bg-background min-h-screen">
       <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-8">
@@ -104,6 +134,7 @@ export default async function LearnerDashboardPage(
           planId={planId}
           assessmentId={latest?.id ?? null}
           learnerId={learner.id}
+          communityResources={communityResources}
         />
 
         <footer
