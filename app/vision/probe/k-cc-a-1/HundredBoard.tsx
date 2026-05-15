@@ -2,26 +2,30 @@
 
 /**
  * K.CC.A.1 hundred-board count-trail probe — interactive demo.
- *
- * The learner taps numbers in order from 1 to 100. Each tap is a
- * telemetry event. The probe ends when:
- *   - the learner taps "Done" (commit)
- *   - or they reach 100 (auto-commit)
- *
- * For the fellowship demo this is a clickthrough — telemetry is
- * captured client-side and a deterministic mock verdict is shown.
- * No network calls.
+ * Editorial pitch palette (cream + Fraunces + Geist + terracotta accent).
  */
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Gear, OrnamentalRule, CornerFlourish } from '../../../Ornament'
 
 type TapEvent = { n: number; t: number; correct: boolean }
 
 const TARGET = 100
-const COMMIT_THRESHOLD = 8 // demo: after 8 taps the learner can finish early
+const COMMIT_THRESHOLD = 8
+
+const C = {
+  bg: '#F5F1E8',
+  paper: '#FBF8F0',
+  ink: '#1A1A1A',
+  inkSoft: '#3D3A35',
+  inkFaint: '#8A8580',
+  accent: '#A14A2F',
+  accentSoft: 'rgba(161, 74, 47, 0.12)',
+  rule: 'rgba(26, 26, 26, 0.10)',
+}
+const SERIF = { fontFamily: 'var(--font-fraunces), Georgia, serif' }
+const SANS = { fontFamily: 'var(--font-geist-sans), -apple-system, sans-serif' }
 
 export default function HundredBoard() {
   const router = useRouter()
@@ -29,10 +33,9 @@ export default function HundredBoard() {
   const [startedAt] = useState(() => Date.now())
   const [resultOpen, setResultOpen] = useState(false)
 
-  const currentNext = taps.filter((e) => e.correct).length + 1 // next expected number
+  const currentNext = taps.filter((e) => e.correct).length + 1
   const last = taps[taps.length - 1]
 
-  // grid of 1..100, brass cells
   const cells = useMemo(() => Array.from({ length: TARGET }, (_, i) => i + 1), [])
 
   function onTap(n: number) {
@@ -43,7 +46,6 @@ export default function HundredBoard() {
     ])
   }
 
-  // auto-finish if they reach 100 correctly
   useEffect(() => {
     const correctCount = taps.filter((e) => e.correct).length
     if (correctCount >= TARGET) setResultOpen(true)
@@ -54,30 +56,29 @@ export default function HundredBoard() {
   const tappedSet = new Set(taps.filter((e) => e.correct).map((e) => e.n))
 
   return (
-    <div className="space-y-6">
-      {/* ----------------------------------------------------------------
-          Status strip — what the learner sees up top
-      ---------------------------------------------------------------- */}
-      <div className="border border-brass-deep/60 bg-background/60 p-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-8">
+      {/* Status strip */}
+      <div
+        className="p-5"
+        style={{
+          background: C.paper,
+          border: `1px solid ${C.rule}`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-6 flex-wrap">
           <div>
+            <Eyebrow>The task</Eyebrow>
             <div
-              className="text-brass uppercase tracking-[0.25em] text-[10px]"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
-            >
-              The Task
-            </div>
-            <div
-              className="text-cream mt-1"
-              style={{ fontFamily: 'var(--font-eb)', fontSize: 17 }}
+              style={{ ...SERIF, color: C.ink }}
+              className="mt-2 text-lg md:text-xl"
             >
               Tap each number in order from{' '}
-              <span className="text-brass-glow">1</span> to{' '}
-              <span className="text-brass-glow">100</span>.
+              <em style={{ color: C.accent, fontStyle: 'italic' }}>1</em> to{' '}
+              <em style={{ color: C.accent, fontStyle: 'italic' }}>100</em>.
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-end gap-8">
             <Stat label="Tap next" value={String(currentNext > TARGET ? TARGET : currentNext)} />
             <Stat label="Counted" value={`${correctCount} / ${TARGET}`} />
             <Stat label="Slips" value={String(wrongCount)} muted />
@@ -86,8 +87,13 @@ export default function HundredBoard() {
 
         {last && (
           <div
-            className={`mt-3 text-xs ${last.correct ? 'text-brass-glow' : 'text-copper'}`}
-            style={{ fontFamily: 'var(--font-eb)', fontStyle: 'italic' }}
+            className="mt-4"
+            style={{
+              ...SERIF,
+              fontStyle: 'italic',
+              fontSize: 14,
+              color: last.correct ? C.accent : C.inkSoft,
+            }}
           >
             {last.correct
               ? `Good — you tapped ${last.n}.`
@@ -96,14 +102,12 @@ export default function HundredBoard() {
         )}
       </div>
 
-      {/* ----------------------------------------------------------------
-          The board
-      ---------------------------------------------------------------- */}
+      {/* The board */}
       <div
-        className="border-2 border-brass-deep/60 bg-background p-4"
+        className="p-3 md:p-5"
         style={{
-          boxShadow:
-            'inset 0 0 60px oklch(0 0 0 / 0.5), 0 6px 24px oklch(0 0 0 / 0.4)',
+          background: C.paper,
+          border: `1px solid ${C.rule}`,
         }}
       >
         <div
@@ -113,44 +117,75 @@ export default function HundredBoard() {
           {cells.map((n) => {
             const tapped = tappedSet.has(n)
             const isNext = n === currentNext && !resultOpen
+            const baseStyle: React.CSSProperties = {
+              ...SANS,
+              aspectRatio: '1 / 1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+              fontSize: 13,
+              letterSpacing: '-0.005em',
+              border: `1px solid ${C.rule}`,
+            }
+            let style: React.CSSProperties
+            if (tapped) {
+              style = {
+                ...baseStyle,
+                background: C.accent,
+                borderColor: C.accent,
+                color: C.bg,
+                fontWeight: 600,
+              }
+            } else if (isNext) {
+              style = {
+                ...baseStyle,
+                background: C.accentSoft,
+                borderColor: C.accent,
+                color: C.accent,
+                fontWeight: 600,
+                animation: 'next-pulse 1.6s ease-in-out infinite',
+              }
+            } else {
+              style = {
+                ...baseStyle,
+                background: C.bg,
+                color: C.ink,
+                fontWeight: 400,
+              }
+            }
             return (
               <button
                 key={n}
                 onClick={() => onTap(n)}
                 disabled={resultOpen}
-                className={[
-                  'aspect-square flex items-center justify-center select-none transition-all',
-                  'border',
-                  tapped
-                    ? 'border-brass-glow text-background bg-brass-glow'
-                    : isNext
-                    ? 'border-brass text-brass-glow bg-brass/10 animate-pulse'
-                    : 'border-brass-deep/50 text-cream-soft hover:text-brass-glow hover:border-brass',
-                ].join(' ')}
-                style={{
-                  fontFamily: 'var(--font-cinzel)',
-                  fontSize: 13,
-                  letterSpacing: '0.04em',
-                  fontWeight: tapped || isNext ? 700 : 500,
-                  boxShadow: tapped
-                    ? '0 0 10px oklch(0.86 0.16 88 / 0.6)'
-                    : 'none',
-                }}
+                style={style}
+                className="cursor-pointer hover:bg-[rgba(26,26,26,0.04)]"
               >
                 {n}
               </button>
             )
           })}
         </div>
+
+        <style>{`
+          @keyframes next-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(161, 74, 47, 0.0); }
+            50%      { box-shadow: 0 0 0 4px rgba(161, 74, 47, 0.15); }
+          }
+        `}</style>
       </div>
 
-      {/* ----------------------------------------------------------------
-          Action row
-      ---------------------------------------------------------------- */}
+      {/* Action row */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div
-          className="text-cream-faint text-xs italic"
-          style={{ fontFamily: 'var(--font-eb)' }}
+          style={{
+            ...SERIF,
+            fontStyle: 'italic',
+            fontSize: 14,
+            color: C.inkFaint,
+          }}
         >
           {correctCount < COMMIT_THRESHOLD
             ? `Tap at least ${COMMIT_THRESHOLD} numbers in order to finish, or reach 100.`
@@ -161,25 +196,42 @@ export default function HundredBoard() {
           <button
             onClick={() => setTaps([])}
             disabled={resultOpen || taps.length === 0}
-            className="px-4 py-2 border border-brass-deep text-cream-soft hover:text-brass-glow hover:border-brass disabled:opacity-30 disabled:hover:text-cream-soft disabled:hover:border-brass-deep transition-colors uppercase text-[11px] tracking-[0.18em]"
-            style={{ fontFamily: 'var(--font-cinzel)' }}
+            className="transition-opacity disabled:opacity-30 hover:opacity-70"
+            style={{
+              ...SANS,
+              padding: '10px 18px',
+              border: `1px solid ${C.ink}`,
+              background: 'transparent',
+              color: C.ink,
+              fontSize: 11,
+              letterSpacing: '0.18em',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+            }}
           >
             Start over
           </button>
           <button
             onClick={() => setResultOpen(true)}
             disabled={correctCount < COMMIT_THRESHOLD}
-            className="px-5 py-2 border-2 border-brass bg-brass text-brass-fg hover:bg-brass-glow hover:border-brass-glow disabled:opacity-30 disabled:hover:bg-brass disabled:hover:border-brass transition-colors uppercase text-[11px] tracking-[0.2em] font-bold"
-            style={{ fontFamily: 'var(--font-cinzel)' }}
+            className="transition-opacity disabled:opacity-30 hover:opacity-85"
+            style={{
+              ...SANS,
+              padding: '10px 22px',
+              background: C.accent,
+              color: C.bg,
+              fontSize: 11,
+              letterSpacing: '0.18em',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              border: 'none',
+            }}
           >
             Done — show me the results
           </button>
         </div>
       </div>
 
-      {/* ----------------------------------------------------------------
-          Results dialog — the agent-ladder verdict
-      ---------------------------------------------------------------- */}
       {resultOpen && (
         <ResultDialog
           taps={taps}
@@ -191,18 +243,50 @@ export default function HundredBoard() {
   )
 }
 
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        ...SANS,
+        color: C.inkFaint,
+        fontWeight: 500,
+        letterSpacing: '0.22em',
+        fontSize: 10,
+        textTransform: 'uppercase',
+      }}
+      className="flex items-center gap-3"
+    >
+      <span aria-hidden style={{ display: 'inline-block', width: 16, height: 1, background: C.accent }} />
+      <span>{children}</span>
+    </div>
+  )
+}
+
 function Stat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="text-center">
       <div
-        className={`text-[10px] uppercase tracking-[0.22em] ${muted ? 'text-cream-faint' : 'text-brass'}`}
-        style={{ fontFamily: 'var(--font-cinzel)' }}
+        style={{
+          ...SANS,
+          color: muted ? C.inkFaint : C.accent,
+          fontSize: 10,
+          letterSpacing: '0.22em',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+        }}
       >
         {label}
       </div>
       <div
-        className={muted ? 'text-cream-soft' : 'text-brass-glow'}
-        style={{ fontFamily: 'var(--font-cinzel)', fontSize: 22, fontWeight: 700 }}
+        style={{
+          ...SERIF,
+          color: muted ? C.inkSoft : C.ink,
+          fontSize: 28,
+          fontWeight: 400,
+          letterSpacing: '-0.02em',
+          lineHeight: 1,
+        }}
+        className="mt-1"
       >
         {value}
       </div>
@@ -210,9 +294,7 @@ function Stat({ label, value, muted }: { label: string; value: string; muted?: b
   )
 }
 
-/* --------------------------------------------------------------------
-   Results dialog
-   -------------------------------------------------------------------- */
+/* ---------------------------------------------------------------- */
 
 function ResultDialog({
   taps,
@@ -225,159 +307,206 @@ function ResultDialog({
 }) {
   const correct = taps.filter((t) => t.correct).length
   const wrong = taps.length - correct
-
-  // Deterministic verdict from the trajectory — mirrors the R1-R10 rules.
   const verdict = computeVerdict(taps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
+      style={{ background: 'rgba(26,26,26,0.45)', backdropFilter: 'blur(4px)' }}
     >
       <div
-        className="relative w-full max-w-2xl my-8 border-2 border-brass-deep bg-background shadow-2xl"
+        className="relative w-full max-w-2xl my-8 shadow-2xl"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 50% 0%, oklch(0.18 0.020 55) 0%, oklch(0.13 0.014 50) 70%)',
+          background: C.bg,
+          color: C.ink,
+          border: `1px solid ${C.rule}`,
         }}
       >
-        {/* corner rivets */}
-        {[
-          { t: 6, l: 6 }, { t: 6, r: 6 },
-          { b: 6, l: 6 }, { b: 6, r: 6 },
-        ].map((p, i) => (
-          <div key={i}
-            className="absolute h-2 w-2 rounded-full bg-brass"
-            style={{
-              top: p.t, left: p.l, right: p.r, bottom: p.b,
-              boxShadow: '0 0 6px oklch(0.86 0.16 88 / 0.4)',
-            }}
-          />
-        ))}
+        <div aria-hidden style={{ height: 3, background: C.accent }} />
 
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-3 text-cream-faint hover:text-brass-glow text-2xl leading-none w-8 h-8 flex items-center justify-center"
+          className="absolute top-4 right-4 text-2xl leading-none w-8 h-8 flex items-center justify-center hover:opacity-60 transition-opacity"
+          style={{ color: C.inkFaint }}
         >
           ×
         </button>
 
-        <div className="p-6 md:p-10">
-          {/* Header — verdict */}
-          <div className="text-center pb-5 border-b border-brass-deep/40">
-            <div
-              className="text-brass uppercase tracking-[0.3em] text-[10px] mb-2"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
-            >
-              Mastery Passport · Entry Drafted
-            </div>
-            <div className="flex justify-center mb-3">
-              <Gear className="h-12 w-12 text-brass-glow animate-turn-slow drop-shadow-[0_0_10px_oklch(0.86_0.16_88/0.6)]" teeth={12} />
-            </div>
+        <div className="p-8 md:p-12">
+          <div style={{ borderBottom: `1px solid ${C.rule}` }} className="pb-6">
+            <Eyebrow>Mastery passport · Entry drafted</Eyebrow>
+
             <h2
-              className="text-brass-glow"
+              className="mt-5"
               style={{
-                fontFamily: 'var(--font-cinzel)',
-                fontSize: 28,
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                lineHeight: 1.2,
+                ...SERIF,
+                fontWeight: 400,
+                fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)',
+                lineHeight: 1.05,
+                letterSpacing: '-0.025em',
+                color: C.ink,
               }}
             >
-              {verdict.headline}
+              {verdict.headline}.
             </h2>
+
             <div
-              className="mt-2 text-cream-faint uppercase"
+              className="mt-3"
               style={{
-                fontFamily: 'var(--font-cinzel)',
-                fontSize: 10,
-                letterSpacing: '0.28em',
+                ...SANS,
+                color: C.inkFaint,
+                fontSize: 11,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                fontWeight: 500,
               }}
             >
               K.CC.A.1 · Count to 100 by ones and tens
             </div>
-            <div className="mt-4 flex justify-center text-brass-deep">
-              <OrnamentalRule className="h-5 w-56" />
-            </div>
           </div>
 
-          {/* Reasoning — plain language */}
-          <div className="mt-6">
+          {/* Reasoning */}
+          <div className="mt-7">
             <div
-              className="text-brass uppercase tracking-[0.25em] text-[10px] mb-2"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              style={{
+                ...SANS,
+                color: C.accent,
+                fontSize: 10,
+                letterSpacing: '0.22em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+              }}
+              className="mb-2"
             >
               How we read what you did
             </div>
             <p
-              className="text-cream-soft leading-relaxed"
-              style={{ fontFamily: 'var(--font-eb)', fontSize: 15 }}
+              style={{
+                ...SANS,
+                color: C.inkSoft,
+                fontSize: 15,
+                lineHeight: 1.65,
+              }}
             >
               {verdict.reasoning} You tapped{' '}
-              <span className="text-brass-glow">{taps.length} times</span> &mdash;{' '}
-              <span className="text-brass-glow">{correct} in order</span>
+              <em style={{ ...SERIF, fontStyle: 'italic', color: C.ink }}>{taps.length} times</em> &mdash;{' '}
+              <em style={{ ...SERIF, fontStyle: 'italic', color: C.ink }}>{correct} in order</em>
               {wrong > 0 && (
-                <>, with <span className="text-copper">{wrong} slips</span></>
+                <>, with <em style={{ ...SERIF, fontStyle: 'italic', color: C.accent }}>{wrong} slips</em></>
               )}
               .
             </p>
           </div>
 
-          {/* The agent ladder */}
-          <div className="mt-8">
+          {/* Agent ladder */}
+          <div className="mt-9">
             <div
-              className="text-brass uppercase tracking-[0.25em] text-[10px] mb-3"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              style={{
+                ...SANS,
+                color: C.accent,
+                fontSize: 10,
+                letterSpacing: '0.22em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+              }}
+              className="mb-3"
             >
               Four AI agents reviewed this verdict
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <ul className="space-y-0">
               {verdict.ladder.map((stage, i) => (
-                <LadderRow key={i} {...stage} />
+                <LadderRow key={i} {...stage} isLast={i === verdict.ladder.length - 1} />
               ))}
-            </div>
+            </ul>
           </div>
 
-          {/* Carry-forward CTA */}
-          <div className="mt-8 p-4 border border-brass-deep/60 bg-brass/5 text-center">
+          {/* CTA */}
+          <div
+            className="mt-9 p-5"
+            style={{
+              background: C.paper,
+              border: `1px solid ${C.rule}`,
+              borderLeft: `2px solid ${C.accent}`,
+            }}
+          >
             <div
-              className="text-brass uppercase tracking-[0.25em] text-[10px] mb-2"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              style={{
+                ...SANS,
+                color: C.accent,
+                fontSize: 10,
+                letterSpacing: '0.22em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+              }}
+              className="mb-2"
             >
               What happens next
             </div>
             <p
-              className="text-cream-soft text-sm leading-relaxed"
-              style={{ fontFamily: 'var(--font-eb)' }}
+              style={{
+                ...SANS,
+                color: C.inkSoft,
+                fontSize: 14.5,
+                lineHeight: 1.6,
+              }}
             >
-              This entry is added to the learner&rsquo;s mastery passport. When they enter
-              Math Games Builder next, the matching moon in the galaxy already knows them
-              &mdash; lit up if mastered, dim if there&rsquo;s work to do.
+              This entry is added to the learner&rsquo;s mastery passport. It carries forward
+              into every other Stratamundo stage and into the math games they play and,
+              later, build.
             </p>
           </div>
 
-          {/* Buttons */}
-          <div className="mt-8 flex flex-wrap gap-3 justify-center">
+          <div className="mt-9 flex flex-wrap gap-3">
             <button
               onClick={onBack}
-              className="px-5 py-2 border-2 border-brass bg-brass text-brass-fg hover:bg-brass-glow hover:border-brass-glow transition-colors uppercase text-[11px] tracking-[0.2em] font-bold"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              className="transition-opacity hover:opacity-85"
+              style={{
+                ...SANS,
+                padding: '10px 22px',
+                background: C.accent,
+                color: C.bg,
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                border: 'none',
+              }}
             >
               Back to the atlas
             </button>
             <button
               onClick={onClose}
-              className="px-5 py-2 border border-brass-deep text-cream-soft hover:text-brass-glow hover:border-brass transition-colors uppercase text-[11px] tracking-[0.2em]"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              className="transition-opacity hover:opacity-70"
+              style={{
+                ...SANS,
+                padding: '10px 22px',
+                background: 'transparent',
+                color: C.ink,
+                border: `1px solid ${C.ink}`,
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+              }}
             >
               Try again
             </button>
             <Link
               href="/setup"
-              className="px-5 py-2 border border-brass-deep text-cream-soft hover:text-brass-glow hover:border-brass transition-colors uppercase text-[11px] tracking-[0.2em]"
-              style={{ fontFamily: 'var(--font-cinzel)' }}
+              className="transition-opacity hover:opacity-70 inline-flex items-center"
+              style={{
+                ...SANS,
+                padding: '10px 22px',
+                color: C.ink,
+                border: `1px solid ${C.ink}`,
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+              }}
             >
               See the live diagnostic
             </Link>
@@ -393,51 +522,74 @@ function LadderRow({
   agent,
   pass,
   note,
+  isLast,
 }: {
   stage: string
   agent: string
   pass: boolean
   note: string
+  isLast?: boolean
 }) {
   return (
-    <div className="relative p-3 border border-brass-deep/60 bg-background/60">
-      <CornerFlourish corner="tl" className="absolute -top-1 -left-1 h-4 w-4 text-brass-deep" />
-      <CornerFlourish corner="br" className="absolute -bottom-1 -right-1 h-4 w-4 text-brass-deep" />
-      <div className="flex items-center justify-between">
+    <li
+      style={{
+        borderTop: `1px solid ${C.rule}`,
+        borderBottom: isLast ? `1px solid ${C.rule}` : 'none',
+      }}
+      className="py-4 grid gap-4 md:grid-cols-[140px_1fr_auto] items-start"
+    >
+      <div
+        style={{
+          ...SANS,
+          color: C.inkFaint,
+          fontSize: 10,
+          letterSpacing: '0.22em',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+        }}
+      >
+        {stage}
+      </div>
+      <div>
         <div
-          className="text-brass uppercase tracking-[0.22em] text-[9px]"
-          style={{ fontFamily: 'var(--font-cinzel)' }}
+          style={{
+            ...SERIF,
+            fontSize: 16,
+            color: C.ink,
+            letterSpacing: '-0.01em',
+          }}
         >
-          {stage}
+          {agent}
         </div>
         <div
-          className={`text-[10px] uppercase tracking-[0.22em] ${pass ? 'text-brass-glow' : 'text-copper'}`}
-          style={{ fontFamily: 'var(--font-cinzel)' }}
+          style={{
+            ...SANS,
+            fontSize: 13.5,
+            color: C.inkSoft,
+            lineHeight: 1.55,
+          }}
+          className="mt-1"
         >
-          {pass ? 'Confirmed' : 'Flagged'}
+          {note}
         </div>
       </div>
       <div
-        className="mt-1 text-cream"
-        style={{ fontFamily: 'var(--font-cinzel)', fontSize: 13, letterSpacing: '0.04em' }}
+        style={{
+          ...SANS,
+          color: pass ? C.accent : '#7A2818',
+          fontSize: 10,
+          letterSpacing: '0.22em',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+        }}
       >
-        {agent}
+        {pass ? 'Confirmed' : 'Flagged'}
       </div>
-      <div
-        className="mt-1 text-cream-soft text-xs leading-relaxed"
-        style={{ fontFamily: 'var(--font-eb)' }}
-      >
-        {note}
-      </div>
-    </div>
+    </li>
   )
 }
 
-/* --------------------------------------------------------------------
-   Verdict computation — mirrors the R1-R10 rules in plain words.
-   This is the demo's intelligence: it reads the trajectory, not just
-   the outcome, and explains itself.
-   -------------------------------------------------------------------- */
+/* ---------------------------------------------------------------- */
 
 type Verdict = {
   state: 'demonstrated' | 'working' | 'misconception'
@@ -449,10 +601,8 @@ type Verdict = {
 function computeVerdict(taps: TapEvent[]): Verdict {
   const correct = taps.filter((t) => t.correct).length
   const wrong = taps.length - correct
-  const lastT = taps.length > 0 ? taps[taps.length - 1].t : 0
   const reachedTen = correct >= 10
   const reached100 = correct >= TARGET
-  // detect the classic teen→twenty stumble (counted past 12 in order)
   const passedTeens = correct >= 20
 
   if (reached100 && wrong <= 2) {
@@ -460,15 +610,15 @@ function computeVerdict(taps: TapEvent[]): Verdict {
       state: 'demonstrated',
       headline: 'Demonstrated mastery',
       reasoning:
-        'You counted all the way to 100 in order with steady pacing — exactly the kind of trajectory that shows real understanding of the count sequence (rules R2 and R10).',
+        'You counted all the way to 100 in order with steady pacing — exactly the trajectory that shows real understanding of the count sequence.',
       ladder: [
-        { stage: 'Stage 1 · Haiku', agent: 'The Critic (cheap filter)', pass: true,
+        { stage: 'Stage 1 · Haiku', agent: 'The Critic — cheap filter', pass: true,
           note: 'Telemetry shows a single clean run, no resets, all numbers in order.' },
-        { stage: 'Stage 2 · Sonnet', agent: 'The Critic (deep)', pass: true,
+        { stage: 'Stage 2 · Sonnet', agent: 'The Critic — deep', pass: true,
           note: 'No false-success patterns; the trajectory matches authentic counting.' },
-        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary (obvious)', pass: true,
+        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary — obvious', pass: true,
           note: 'No skip-clicking, no UI exploit detected.' },
-        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary (creative)', pass: true,
+        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary — creative', pass: true,
           note: 'No memorized-sequence pattern; pacing is human, not robotic.' },
       ],
     }
@@ -479,15 +629,15 @@ function computeVerdict(taps: TapEvent[]): Verdict {
       state: 'working',
       headline: 'Working on it',
       reasoning:
-        'You moved through most of the count sequence with a few small slips. That is normal at this stage — it suggests partial mastery, not a misconception (rule R5).',
+        'You moved through most of the count sequence with a few small slips. That is normal at this stage — partial mastery, not a misconception.',
       ladder: [
-        { stage: 'Stage 1 · Haiku', agent: 'The Critic (cheap filter)', pass: true,
+        { stage: 'Stage 1 · Haiku', agent: 'The Critic — cheap filter', pass: true,
           note: 'Several slips visible; partial-mastery pattern, not random.' },
-        { stage: 'Stage 2 · Sonnet', agent: 'The Critic (deep)', pass: true,
+        { stage: 'Stage 2 · Sonnet', agent: 'The Critic — deep', pass: true,
           note: 'Slips clustered around tens-transitions — typical for emerging counters.' },
-        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary (obvious)', pass: true,
+        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary — obvious', pass: true,
           note: 'No exploit pattern; slips look authentic.' },
-        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary (creative)', pass: true,
+        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary — creative', pass: true,
           note: 'No memorization shortcut; pacing varies naturally.' },
       ],
     }
@@ -498,35 +648,34 @@ function computeVerdict(taps: TapEvent[]): Verdict {
       state: 'misconception',
       headline: 'A specific misconception is showing',
       reasoning:
-        'You counted some numbers in order then started skipping or going out of sequence. The pattern matches a known misconception around the count sequence — the guide should re-teach this with a number line and concrete objects (rule R7).',
+        'You counted some numbers in order then started skipping or going out of sequence. The pattern matches a known misconception around the count sequence — the guide should re-teach this with a number line and concrete objects.',
       ladder: [
-        { stage: 'Stage 1 · Haiku', agent: 'The Critic (cheap filter)', pass: true,
-          note: 'Wrong-tap pattern matches an entry in the K.CC.A.1 misconception map.' },
-        { stage: 'Stage 2 · Sonnet', agent: 'The Critic (deep)', pass: true,
+        { stage: 'Stage 1 · Haiku', agent: 'The Critic — cheap filter', pass: true,
+          note: 'Wrong-tap pattern matches a known misconception entry.' },
+        { stage: 'Stage 2 · Sonnet', agent: 'The Critic — deep', pass: true,
           note: 'High wrong-rate after a short correct prefix — fits the count-sequence-instability misconception.' },
-        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary (obvious)', pass: true,
+        { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary — obvious', pass: true,
           note: 'Not random clicking — the early prefix shows real intent.' },
-        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary (creative)', pass: true,
+        { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary — creative', pass: true,
           note: 'No exploit; the verdict is the misconception, not bad faith.' },
       ],
     }
   }
 
-  // Default — short or ambiguous
   return {
     state: 'working',
     headline: 'A starting picture',
     reasoning: reachedTen
-      ? 'You showed the start of the count sequence cleanly. A longer probe would tell us more — for the demo, the engine reads what you gave it (rule R1: process over outcome).'
+      ? 'You showed the start of the count sequence cleanly. A longer probe would tell us more — for the demo, the engine reads what you gave it.'
       : 'A short trajectory — the engine logs every tap, with timing, and would normally probe further. For the demo, this is enough to show how the read-out works.',
     ladder: [
-      { stage: 'Stage 1 · Haiku', agent: 'The Critic (cheap filter)', pass: true,
+      { stage: 'Stage 1 · Haiku', agent: 'The Critic — cheap filter', pass: true,
         note: 'Trajectory is short but coherent.' },
-      { stage: 'Stage 2 · Sonnet', agent: 'The Critic (deep)', pass: true,
-        note: 'Not enough variety yet to up- or down-grade the verdict (rule R10).' },
-      { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary (obvious)', pass: true,
+      { stage: 'Stage 2 · Sonnet', agent: 'The Critic — deep', pass: true,
+        note: 'Not enough variety yet to up- or down-grade the verdict.' },
+      { stage: 'Stage 3 · Haiku', agent: 'Shortcut Adversary — obvious', pass: true,
         note: 'Nothing exploit-like in the taps.' },
-      { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary (creative)', pass: true,
+      { stage: 'Stage 4 · Sonnet', agent: 'Shortcut Adversary — creative', pass: true,
         note: 'No memorization or pacing artefact.' },
     ],
   }
