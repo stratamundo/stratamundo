@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# research source PDF + derived per-page text dump (large, locally regenerated)
+docs/research/Progressions-3-5-Fractions.pdf
+docs/research/_progressions_pages/
