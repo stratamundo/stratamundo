@@ -22,29 +22,11 @@ type Props = {
   constellations: Constellation[]
 }
 
-/* Pitch palette — terracotta accent on cream paper. */
-const PITCH = {
-  bg: '#FBF8F0',
-  bgDeep: '#F5F1E8',
-  ink: '#1A1A1A',
-  inkSoft: '#3D3A35',
-  inkFaint: '#8A8580',
-  accent: '#A14A2F',
-  rule: 'rgba(26, 26, 26, 0.10)',
-}
-
-/* Grade encoded by accent opacity — keeps the page chromatically calm. */
-const GRADE_ALPHA: Record<string, number> = {
-  K: 1.0,
-  '1': 0.75,
-  '2': 0.5,
-  '3': 0.3,
-}
-
-function tintForGrade(grade: string): string {
-  const a = GRADE_ALPHA[grade] ?? 0.6
-  // hex #A14A2F at alpha
-  return `rgba(161, 74, 47, ${a})`
+const GRADE_TINT: Record<string, string> = {
+  K: 'oklch(0.86 0.16 88)',  // brass-glow — softest
+  '1': 'oklch(0.74 0.14 80)',  // brass
+  '2': 'oklch(0.62 0.16 42)',  // copper
+  '3': 'oklch(0.55 0.12 70)',  // brass-deep
 }
 
 export default function AtlasMap({ constellations }: Props) {
@@ -52,8 +34,8 @@ export default function AtlasMap({ constellations }: Props) {
 
   // Lay out constellations in a 4-column grid.
   const cols = 4
-  const cellW = 340
-  const cellH = 340
+  const cellW = 320
+  const cellH = 320
   const pad = 32
   const totalRows = Math.ceil(constellations.length / cols)
   const width = cols * cellW + (cols + 1) * pad
@@ -89,25 +71,40 @@ export default function AtlasMap({ constellations }: Props) {
           role="img"
           aria-label="Star atlas of K-2 math standards"
         >
-          {/* Cream paper background, very subtle dot grid */}
-          <rect width={width} height={height} fill={PITCH.bg} />
+          {/* Background — deep mahogany with subtle nebula */}
+          <defs>
+            <radialGradient id="nebula" cx="50%" cy="40%" r="70%">
+              <stop offset="0%" stopColor="oklch(0.18 0.022 55)" />
+              <stop offset="100%" stopColor="oklch(0.10 0.012 50)" />
+            </radialGradient>
+            <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="oklch(0.95 0.10 88 / 1)" />
+              <stop offset="40%" stopColor="oklch(0.80 0.14 80 / 0.65)" />
+              <stop offset="100%" stopColor="oklch(0.74 0.14 80 / 0)" />
+            </radialGradient>
+            <filter id="brassFilter">
+              <feGaussianBlur stdDeviation="0.4" />
+            </filter>
+          </defs>
 
-          {/* Faint dot pattern — paper texture, not stars */}
-          {Array.from({ length: 90 }).map((_, i) => {
+          <rect width={width} height={height} fill="url(#nebula)" />
+
+          {/* Faint star field background — deterministic dot pattern */}
+          {Array.from({ length: 180 }).map((_, i) => {
             const x = ((i * 73) % 1000) / 1000 * width
             const y = ((i * 137) % 1000) / 1000 * height
-            const r = 0.6
-            const o = ((i * 41) % 100) / 100 * 0.12 + 0.04
+            const r = ((i * 19) % 10) / 10 * 0.7 + 0.3
+            const o = ((i * 41) % 100) / 100 * 0.4 + 0.05
             return (
               <circle key={i} cx={x} cy={y} r={r}
-                fill={PITCH.ink} opacity={o} />
+                fill="oklch(0.92 0.020 75)" opacity={o} />
             )
           })}
 
           {/* Each constellation */}
           {placed.map(({ c, cx, cy }) => {
             const r = 110 // constellation radius
-            const tint = tintForGrade(c.grade)
+            const tint = GRADE_TINT[c.grade] ?? GRADE_TINT['1']
             const stars = c.stars.map((s) => ({
               s,
               x: cx + Math.cos(s.angle) * (s.radius * r),
@@ -116,9 +113,10 @@ export default function AtlasMap({ constellations }: Props) {
 
             return (
               <g key={c.id}>
-                {/* Faint orbit ring */}
+                {/* Soft halo behind the constellation */}
+                <circle cx={cx} cy={cy} r={r + 10} fill={tint} opacity={0.04} />
                 <circle cx={cx} cy={cy} r={r} fill="none"
-                  stroke={PITCH.ink} strokeOpacity={0.08} strokeWidth={0.6}
+                  stroke="oklch(0.55 0.12 70 / 0.18)" strokeWidth={0.6}
                   strokeDasharray="2 4" />
 
                 {/* Constellation lines — connect each star to the next */}
@@ -128,52 +126,57 @@ export default function AtlasMap({ constellations }: Props) {
                   return (
                     <line key={`l-${p.s.id}`}
                       x1={prev.x} y1={prev.y} x2={p.x} y2={p.y}
-                      stroke={tint} strokeWidth={0.6} opacity={0.5}
+                      stroke={tint} strokeWidth={0.5} opacity={0.32}
                     />
                   )
                 })}
 
-                {/* Stars — terracotta dots on cream */}
+                {/* Stars */}
                 {stars.map((p) => (
                   <g key={p.s.id}
                     style={{ cursor: 'pointer' }}
                     onClick={() => setSelected({ star: p.s, cluster: c })}
                   >
-                    <circle cx={p.x} cy={p.y} r={9}
-                      fill={tint} opacity={0.16} />
-                    <circle cx={p.x} cy={p.y} r={3.2}
-                      fill={tint} />
+                    <circle cx={p.x} cy={p.y} r={11}
+                      fill="url(#starGlow)" opacity={0.7} />
+                    <circle cx={p.x} cy={p.y} r={2.6}
+                      fill="oklch(0.95 0.10 88)" />
                     <circle cx={p.x} cy={p.y} r={14}
                       fill="transparent" />
                   </g>
                 ))}
 
-                {/* Editorial nameplate at the bottom of the cell */}
+                {/* Brass nameplate at the bottom of the cell */}
                 <g>
-                  <line
-                    x1={cx - 70} y1={cy + r + 14}
-                    x2={cx + 70} y2={cy + r + 14}
-                    stroke={PITCH.accent} strokeWidth={1.5}
+                  <rect
+                    x={cx - 110} y={cy + r + 4} width={220} height={40} rx={2}
+                    fill="oklch(0.18 0.020 55)"
+                    stroke="oklch(0.55 0.12 70 / 0.7)" strokeWidth={0.8}
                   />
-                  <text x={cx} y={cy + r + 30}
+                  {/* Brass rivets */}
+                  {[-102, 102].map((dx) => (
+                    <circle key={dx}
+                      cx={cx + dx} cy={cy + r + 24} r={1.4}
+                      fill="oklch(0.74 0.14 80)" />
+                  ))}
+                  <text x={cx} y={cy + r + 20}
                     textAnchor="middle"
-                    fill={PITCH.ink}
+                    fill="oklch(0.86 0.16 88)"
                     style={{
-                      fontFamily: 'var(--font-fraunces), Georgia, serif',
-                      fontSize: 13,
+                      fontFamily: 'var(--font-eb)',
+                      fontSize: 11,
                       fontStyle: 'italic',
-                      letterSpacing: '-0.01em',
                     }}>
-                    {c.description.length > 32
-                      ? c.description.slice(0, 30) + '…'
+                    {c.description.length > 36
+                      ? c.description.slice(0, 34) + '…'
                       : c.description}
                   </text>
-                  <text x={cx} y={cy + r + 46}
+                  <text x={cx} y={cy + r + 35}
                     textAnchor="middle"
-                    fill={PITCH.inkFaint}
+                    fill="oklch(0.62 0.018 65)"
                     style={{
-                      fontFamily: 'var(--font-geist-sans), sans-serif',
-                      fontSize: 9,
+                      fontFamily: 'var(--font-cinzel)',
+                      fontSize: 8.5,
                       letterSpacing: '0.22em',
                       textTransform: 'uppercase',
                     }}>
@@ -186,72 +189,76 @@ export default function AtlasMap({ constellations }: Props) {
         </svg>
       </div>
 
-      {/* Detail panel — editorial card on cream */}
+      {/* Detail panel */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => setSelected(null)}
           role="dialog"
           aria-modal="true"
-          style={{ background: 'rgba(26,26,26,0.45)', backdropFilter: 'blur(4px)' }}
         >
           <div
-            className="relative max-w-xl w-full shadow-2xl"
+            className="relative max-w-lg w-full border-2 border-brass-deep bg-background shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: PITCH.bg,
-              color: PITCH.ink,
-              border: `1px solid ${PITCH.rule}`,
+              backgroundImage:
+                'radial-gradient(circle at 30% 0%, oklch(0.18 0.020 55) 0%, oklch(0.13 0.014 50) 70%)',
             }}
           >
-            {/* terracotta top accent */}
-            <div aria-hidden style={{ height: 3, background: PITCH.accent }} />
+            {/* Brass corner rivets */}
+            {[
+              { t: 6, l: 6 }, { t: 6, r: 6 },
+              { b: 6, l: 6 }, { b: 6, r: 6 },
+            ].map((p, i) => (
+              <div key={i}
+                className="absolute h-2 w-2 rounded-full bg-brass"
+                style={{
+                  top: p.t, left: p.l, right: p.r, bottom: p.b,
+                  boxShadow: '0 0 6px oklch(0.86 0.16 88 / 0.4)',
+                }}
+              />
+            ))}
 
             <button
               onClick={() => setSelected(null)}
               aria-label="Close"
-              className="absolute top-4 right-4 text-2xl leading-none w-8 h-8 flex items-center justify-center hover:opacity-60 transition-opacity"
-              style={{ color: PITCH.inkFaint }}
+              className="absolute top-3 right-3 text-cream-faint hover:text-brass-glow text-xl leading-none w-7 h-7 flex items-center justify-center"
             >
               ×
             </button>
 
-            <div className="p-8 md:p-10">
+            <div className="p-8">
               {/* Header */}
-              <div style={{ borderBottom: `1px solid ${PITCH.rule}` }} className="pb-5">
+              <div className="text-center pb-4 border-b border-brass-deep/40">
                 <div
                   style={{
-                    fontFamily: 'var(--font-geist-sans), sans-serif',
+                    fontFamily: 'var(--font-cinzel)',
                     letterSpacing: '0.22em',
                     fontSize: 11,
-                    color: PITCH.inkFaint,
+                    color: 'oklch(0.62 0.018 65)',
                     textTransform: 'uppercase',
-                    fontWeight: 500,
                   }}
                 >
                   {selected.cluster.domain} · Grade {selected.star.grade}
                 </div>
                 <h2
-                  className="mt-3"
+                  className="mt-2 text-brass-glow"
                   style={{
-                    fontFamily: 'var(--font-fraunces), Georgia, serif',
-                    fontSize: 'clamp(1.6rem, 3vw, 2rem)',
-                    fontWeight: 400,
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.15,
-                    color: PITCH.ink,
+                    fontFamily: 'var(--font-cinzel)',
+                    fontSize: 24,
+                    letterSpacing: '0.06em',
+                    fontWeight: 700,
+                    lineHeight: 1.2,
                   }}
                 >
                   {selected.star.shortName}
                 </h2>
                 <div
-                  className="mt-3"
+                  className="mt-2 text-cream-faint uppercase"
                   style={{
-                    fontFamily: 'var(--font-geist-sans), sans-serif',
+                    fontFamily: 'var(--font-cinzel)',
                     fontSize: 10,
                     letterSpacing: '0.28em',
-                    color: PITCH.inkFaint,
-                    textTransform: 'uppercase',
                   }}
                 >
                   {selected.star.id}
@@ -259,112 +266,68 @@ export default function AtlasMap({ constellations }: Props) {
               </div>
 
               {/* Body */}
-              <div
-                className="mt-6 space-y-5"
-                style={{
-                  fontFamily: 'var(--font-geist-sans), sans-serif',
-                  color: PITCH.inkSoft,
-                  fontSize: 14.5,
-                  lineHeight: 1.6,
-                }}
-              >
-                <Section label="The standard">
-                  {selected.star.description}
-                </Section>
-                <Section label="How we will measure it">
-                  A{' '}
-                  <em
-                    style={{
-                      fontFamily: 'var(--font-fraunces), serif',
-                      fontStyle: 'italic',
-                      color: PITCH.ink,
-                    }}
-                  >
-                    {selected.star.probeMechanic}
-                  </em>{' '}
-                  probe &mdash; a 60-to-90-second instrumented mechanic that captures
-                  every placement, removal, and reset. Telemetry, not just the final
-                  answer, tells us whether the learner truly understood, was
-                  self-correcting, or was guessing.
-                </Section>
-                <Section label="What the result becomes">
-                  A line in the learner&rsquo;s mastery passport. It carries forward into
-                  every other Stratamundo stage and into the math games they play and,
-                  later, build.
-                </Section>
+              <div className="mt-5 space-y-4 text-cream-soft text-sm leading-relaxed"
+                style={{ fontFamily: 'var(--font-eb)' }}>
+                <div>
+                  <div className="text-brass uppercase tracking-widest text-xs mb-1"
+                    style={{ fontFamily: 'var(--font-cinzel)', letterSpacing: '0.2em' }}>
+                    The standard
+                  </div>
+                  <p>{selected.star.description}</p>
+                </div>
+
+                <div>
+                  <div className="text-brass uppercase tracking-widest text-xs mb-1"
+                    style={{ fontFamily: 'var(--font-cinzel)', letterSpacing: '0.2em' }}>
+                    How we will measure it
+                  </div>
+                  <p>
+                    A <span className="text-brass-glow">{selected.star.probeMechanic}</span>{' '}
+                    probe — a 60-to-90-second instrumented mechanic that captures every placement,
+                    removal, and reset. Telemetry — not just the final answer — tells us whether
+                    the learner truly understood, was self-correcting, or was guessing.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="text-brass uppercase tracking-widest text-xs mb-1"
+                    style={{ fontFamily: 'var(--font-cinzel)', letterSpacing: '0.2em' }}>
+                    What the result becomes
+                  </div>
+                  <p>
+                    A line in the learner&rsquo;s mastery passport. It carries forward
+                    into every other Stratamundo stage and into the math games they
+                    play and, later, build.
+                  </p>
+                </div>
               </div>
 
               {PROBE_DEMOS[selected.star.id] && (
-                <div className="mt-7">
+                <div className="mt-6 text-center">
                   <Link
                     href={PROBE_DEMOS[selected.star.id]}
-                    className="inline-flex items-center px-5 py-3 hover:opacity-85 transition-opacity"
-                    style={{
-                      fontFamily: 'var(--font-geist-sans), sans-serif',
-                      background: PITCH.accent,
-                      color: PITCH.bg,
-                      fontSize: 11,
-                      letterSpacing: '0.2em',
-                      fontWeight: 500,
-                      textTransform: 'uppercase',
-                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border-2 border-brass bg-brass text-brass-fg hover:bg-brass-glow hover:border-brass-glow transition-colors uppercase text-[11px] tracking-[0.22em] font-bold"
+                    style={{ fontFamily: 'var(--font-cinzel)' }}
                   >
-                    Try this probe →
+                    Try this probe
                   </Link>
                 </div>
               )}
 
-              <div
-                className="mt-7"
-                style={{
-                  fontFamily: 'var(--font-geist-sans), sans-serif',
-                  fontSize: 12,
-                  color: PITCH.inkFaint,
-                }}
-              >
+              <div className="mt-6 text-center text-cream-faint text-xs italic"
+                style={{ fontFamily: 'var(--font-eb)' }}>
                 {!PROBE_DEMOS[selected.star.id] && (
                   <>This star is part of the planned build.{' '}
-                  <Link
-                    href="/vision/probe/k-cc-a-1"
-                    style={{ color: PITCH.accent, borderBottom: `1px solid ${PITCH.accent}` }}
-                  >
+                  <Link href="/vision/probe/k-cc-a-1" className="text-brass-glow hover:underline not-italic">
                     Try the K.CC.A.1 probe demo →
-                  </Link>
-                  </>
+                  </Link>{' · '}</>
                 )}
-                {PROBE_DEMOS[selected.star.id] && (
-                  <>Press <kbd style={{
-                    padding: '1px 6px',
-                    border: `1px solid ${PITCH.rule}`,
-                    fontSize: 11,
-                  }}>Esc</kbd> or click outside to close.</>
-                )}
+                Press <kbd className="px-1 border border-brass-deep/50 rounded">Esc</kbd> or click outside to close
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div
-        style={{
-          fontFamily: 'var(--font-geist-sans), sans-serif',
-          color: PITCH.accent,
-          letterSpacing: '0.22em',
-          fontSize: 10,
-          textTransform: 'uppercase',
-          fontWeight: 500,
-        }}
-        className="mb-1.5"
-      >
-        {label}
-      </div>
-      <p>{children}</p>
     </div>
   )
 }

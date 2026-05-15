@@ -1,193 +1,145 @@
 import Link from 'next/link'
+import { Gear, OrnamentalRule } from '../../../Ornament'
 import HundredBoard from './HundredBoard'
 
 export const metadata = {
-  title: 'A probe — Count to 100 — Stratamundo',
+  title: 'A probe — K.CC.A.1 — Strata Mundo',
   description:
-    'A clickable demo of one Stratamundo probe: tap numbers 1 to 100 in order. ' +
-    'See what the engine reads from your trajectory.',
+    'A clickable demo of a single Strata Mundo probe: K.CC.A.1, count to 100. ' +
+    'Tap numbers in order on a brass hundred-board; see what the engine reads.',
 }
-
-const C = {
-  bg: '#F5F1E8',
-  ink: '#1A1A1A',
-  inkSoft: '#3D3A35',
-  inkFaint: '#8A8580',
-  accent: '#A14A2F',
-  rule: 'rgba(26, 26, 26, 0.10)',
-}
-const SERIF = { fontFamily: 'var(--font-fraunces), Georgia, serif' }
-const SANS = { fontFamily: 'var(--font-geist-sans), -apple-system, sans-serif' }
 
 export default function ProbePage() {
   return (
-    <main
-      className="flex flex-1 flex-col"
-      style={{ background: C.bg, color: C.ink }}
-    >
+    <main className="flex flex-1 flex-col bg-background">
       {/* HEADER */}
-      <section>
-        <div className="max-w-5xl mx-auto px-8 md:px-14 pt-14 pb-12">
+      <section className="relative border-b-2 border-brass-deep">
+        <div className="max-w-5xl mx-auto px-6 pt-10 pb-8">
           <Link
             href="/vision#atlas"
-            className="inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
-            style={{
-              ...SANS,
-              color: C.inkFaint,
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-            }}
+            className="inline-flex items-center gap-2 text-cream-faint hover:text-brass-glow transition-colors uppercase text-[10px] tracking-[0.25em]"
+            style={{ fontFamily: 'var(--font-cinzel)' }}
           >
             ← Back to the atlas
           </Link>
 
-          <div className="mt-8">
-            <div
-              style={{
-                ...SANS,
-                color: C.inkFaint,
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-              }}
-              className="flex items-center gap-3"
-            >
-              <span aria-hidden style={{ display: 'inline-block', width: 18, height: 1, background: C.accent }} />
-              <span>One probe · Demonstration</span>
-            </div>
-
-            <h1
-              className="mt-5 max-w-[16ch]"
-              style={{
-                ...SERIF,
-                fontWeight: 400,
-                fontSize: 'clamp(2.4rem, 5.5vw, 4.5rem)',
-                lineHeight: 1.02,
-                letterSpacing: '-0.025em',
-                color: C.ink,
-              }}
-            >
-              Count to 100 by ones and tens.
-            </h1>
-
-            <div
-              className="mt-4"
-              style={{
-                ...SANS,
-                color: C.inkFaint,
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-              }}
-            >
-              K.CC.A.1 · Hundred-board count-trail
+          <div className="mt-6 flex items-center gap-4">
+            <Gear
+              className="h-12 w-12 text-brass-glow animate-turn-slow drop-shadow-[0_0_8px_oklch(0.86_0.16_88/0.4)] hidden sm:block"
+              teeth={12}
+            />
+            <div>
+              <div
+                className="text-brass uppercase tracking-[0.3em] text-[10px]"
+                style={{ fontFamily: 'var(--font-cinzel)' }}
+              >
+                A Single Probe · Demonstration
+              </div>
+              <h1
+                className="text-cream mt-1"
+                style={{
+                  fontFamily: 'var(--font-cinzel)',
+                  fontSize: 'clamp(1.5rem, 3vw, 2.2rem)',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.1,
+                }}
+              >
+                Count to 100 by ones and tens
+              </h1>
+              <div
+                className="mt-2 text-cream-faint uppercase"
+                style={{
+                  fontFamily: 'var(--font-cinzel)',
+                  fontSize: 10,
+                  letterSpacing: '0.28em',
+                }}
+              >
+                K.CC.A.1 · Hundred-board count-trail
+              </div>
             </div>
           </div>
 
           <p
-            style={{
-              ...SERIF,
-              color: C.inkSoft,
-              fontStyle: 'italic',
-              fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)',
-              lineHeight: 1.55,
-            }}
-            className="mt-10 max-w-[60ch]"
+            className="mt-5 text-cream-soft max-w-3xl text-sm leading-relaxed"
+            style={{ fontFamily: 'var(--font-eb)', fontStyle: 'italic' }}
           >
-            This is what one probe will feel like. Tap a few numbers in order, then press{' '}
-            <span style={{ color: C.accent, fontStyle: 'normal' }}>Done</span>. The engine
-            reads your trajectory &mdash; not just whether you got things right &mdash; and
-            shows what it would write into the mastery passport.
+            This is what one probe in The Star Atlas Library will feel like. Tap a few
+            numbers in order, then press <span className="text-brass-glow not-italic">Done</span>.
+            The engine reads your trajectory &mdash; not just whether you got things right
+            &mdash; and shows what it would write into the mastery passport.
           </p>
         </div>
       </section>
 
-      <Rule />
-
       {/* WORKSPACE */}
-      <section>
-        <div className="max-w-4xl mx-auto px-8 md:px-14 py-14">
+      <section className="relative bg-background border-b border-brass-deep/30">
+        <div className="max-w-4xl mx-auto px-6 py-10">
           <HundredBoard />
         </div>
       </section>
 
-      <Rule />
-
-      {/* CONTEXT — three principles */}
-      <section>
-        <div className="max-w-5xl mx-auto px-8 md:px-14 py-24">
-          <div
-            style={{
-              ...SANS,
-              color: C.inkFaint,
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-            }}
-            className="flex items-center gap-3"
-          >
-            <span aria-hidden style={{ display: 'inline-block', width: 18, height: 1, background: C.accent }} />
-            <span>Why a probe is not a test</span>
+      {/* CONTEXT — what makes this different */}
+      <section className="relative bg-background">
+        <div className="max-w-4xl mx-auto px-6 py-16">
+          <div className="text-center mb-10">
+            <div
+              className="text-brass uppercase tracking-[0.3em] text-[10px] mb-3"
+              style={{ fontFamily: 'var(--font-cinzel)' }}
+            >
+              Why a Probe Is Not a Test
+            </div>
+            <h2
+              className="text-cream"
+              style={{
+                fontFamily: 'var(--font-cinzel)',
+                fontSize: 'clamp(1.4rem, 2.8vw, 2rem)',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+              }}
+            >
+              The trajectory tells the truth
+            </h2>
+            <div className="mt-5 flex justify-center text-brass-deep">
+              <OrnamentalRule className="h-5 w-56" />
+            </div>
           </div>
 
-          <h2
-            className="mt-5 max-w-[20ch]"
-            style={{
-              ...SERIF,
-              fontWeight: 400,
-              fontSize: 'clamp(2.2rem, 5vw, 4rem)',
-              lineHeight: 1.02,
-              letterSpacing: '-0.025em',
-              color: C.ink,
-            }}
-          >
-            The trajectory tells the truth.
-          </h2>
-
-          <div className="mt-14 grid gap-12 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3">
             {[
               {
-                title: 'Every tap is logged.',
+                title: 'Every tap is logged',
                 body:
                   'Number, time-since-start, and whether it was the next expected number. Not the answer — the trajectory.',
               },
               {
-                title: 'Self-correction is mastery.',
+                title: 'Self-correction is mastery',
                 body:
-                  'A learner who slips on 13, notices, and continues with 14 shows mastery. Not a deduction.',
+                  'A learner who slips on 13, notices, and continues with 14 shows mastery — not a deduction. (Rule R3.)',
               },
               {
-                title: 'Fast and right is fluency.',
+                title: 'Fast and right is fluency',
                 body:
-                  'Speed is never penalized. Only fast-and-wrong counts as a guessing signal.',
+                  'Speed is never penalized. Only fast-and-wrong counts as a guessing signal. (Rule R6.)',
               },
             ].map((c, i) => (
-              <article key={i}>
+              <article
+                key={i}
+                className="p-5 border border-brass-deep/60 bg-background/60"
+              >
                 <h3
+                  className="text-brass-glow text-sm mb-2"
                   style={{
-                    ...SERIF,
-                    fontWeight: 400,
-                    fontSize: 'clamp(1.2rem, 1.8vw, 1.5rem)',
-                    lineHeight: 1.2,
-                    letterSpacing: '-0.02em',
-                    color: C.ink,
+                    fontFamily: 'var(--font-cinzel)',
+                    letterSpacing: '0.08em',
+                    fontWeight: 600,
                   }}
                 >
                   {c.title}
                 </h3>
                 <p
-                  style={{
-                    ...SANS,
-                    color: C.inkSoft,
-                    fontSize: 15,
-                    lineHeight: 1.6,
-                  }}
-                  className="mt-3"
+                  className="text-cream-soft text-sm leading-relaxed"
+                  style={{ fontFamily: 'var(--font-eb)' }}
                 >
                   {c.body}
                 </p>
@@ -195,19 +147,11 @@ export default function ProbePage() {
             ))}
           </div>
 
-          <div className="mt-16">
+          <div className="mt-12 text-center">
             <Link
               href="/vision#atlas"
-              className="inline-flex items-center px-6 py-3 transition-colors"
-              style={{
-                ...SANS,
-                color: C.ink,
-                border: `1px solid ${C.ink}`,
-                fontSize: 12,
-                letterSpacing: '0.18em',
-                fontWeight: 500,
-                textTransform: 'uppercase',
-              }}
+              className="inline-flex items-center gap-2 px-6 py-3 border border-brass-deep text-cream-soft hover:text-brass-glow hover:border-brass transition-colors uppercase text-xs tracking-[0.2em]"
+              style={{ fontFamily: 'var(--font-cinzel)' }}
             >
               ← Explore other constellations
             </Link>
@@ -215,15 +159,5 @@ export default function ProbePage() {
         </div>
       </section>
     </main>
-  )
-}
-
-function Rule() {
-  return (
-    <div
-      aria-hidden
-      style={{ height: 1, background: C.rule }}
-      className="mx-8 md:mx-14"
-    />
   )
 }
