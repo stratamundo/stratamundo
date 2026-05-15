@@ -10,7 +10,13 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
 import type { Constellation, Star } from '../../lib/k2-atlas'
+
+/** Standards with a clickable probe demo (Phase C). */
+const PROBE_DEMOS: Record<string, string> = {
+  'K.CC.A.1': '/vision/probe/k-cc-a-1',
+}
 
 type Props = {
   constellations: Constellation[]
@@ -233,22 +239,27 @@ export default function AtlasMap({ constellations }: Props) {
                 >
                   {selected.cluster.domain} · Grade {selected.star.grade}
                 </div>
-                <div
+                <h2
                   className="mt-2 text-brass-glow"
                   style={{
                     fontFamily: 'var(--font-cinzel)',
-                    fontSize: 22,
-                    letterSpacing: '0.18em',
+                    fontSize: 24,
+                    letterSpacing: '0.06em',
                     fontWeight: 700,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {selected.star.shortName}
+                </h2>
+                <div
+                  className="mt-2 text-cream-faint uppercase"
+                  style={{
+                    fontFamily: 'var(--font-cinzel)',
+                    fontSize: 10,
+                    letterSpacing: '0.28em',
                   }}
                 >
                   {selected.star.id}
-                </div>
-                <div
-                  className="mt-1 text-cream"
-                  style={{ fontFamily: 'var(--font-eb)', fontSize: 16, fontStyle: 'italic' }}
-                >
-                  {selected.star.shortName}
                 </div>
               </div>
 
@@ -289,8 +300,26 @@ export default function AtlasMap({ constellations }: Props) {
                 </div>
               </div>
 
+              {PROBE_DEMOS[selected.star.id] && (
+                <div className="mt-6 text-center">
+                  <Link
+                    href={PROBE_DEMOS[selected.star.id]}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border-2 border-brass bg-brass text-brass-fg hover:bg-brass-glow hover:border-brass-glow transition-colors uppercase text-[11px] tracking-[0.22em] font-bold"
+                    style={{ fontFamily: 'var(--font-cinzel)' }}
+                  >
+                    Try this probe
+                  </Link>
+                </div>
+              )}
+
               <div className="mt-6 text-center text-cream-faint text-xs italic"
                 style={{ fontFamily: 'var(--font-eb)' }}>
+                {!PROBE_DEMOS[selected.star.id] && (
+                  <>This star is part of the planned build.{' '}
+                  <Link href="/vision/probe/k-cc-a-1" className="text-brass-glow hover:underline not-italic">
+                    Try the K.CC.A.1 probe demo →
+                  </Link>{' · '}</>
+                )}
                 Press <kbd className="px-1 border border-brass-deep/50 rounded">Esc</kbd> or click outside to close
               </div>
             </div>

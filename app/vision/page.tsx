@@ -280,7 +280,11 @@ export default function VisionPage() {
               <span className="text-brass-glow not-italic">
                 Tap any star
               </span>{' '}
-              to see how we will measure that piece of mathematics.
+              to see how we will measure that piece of mathematics &mdash; or{' '}
+              <Link href="/vision/probe/k-cc-a-1" className="text-brass-glow not-italic underline decoration-brass underline-offset-4 hover:decoration-brass-glow">
+                try a working probe demo
+              </Link>{' '}
+              for the brightest star, K.CC.A.1.
             </p>
           </div>
 
