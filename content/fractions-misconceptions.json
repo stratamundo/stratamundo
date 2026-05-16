@@ -40,7 +40,8 @@
       ],
       "prerequisite_links": [
         "p02_equivalent_fractions (the fix requires understanding equivalent fractions, which may be the real gap)"
-      ]
+      ],
+      "_scope_status": "Currently latent in SM's MVP (3.NF + 4.NF only). The fractions-problem-bank.json has no addition-with-unlike-denominators probes, so the diagnostic cannot trigger m02. The analysis prompt's relevantMisconceptions filter excludes misconceptions not referenced by any attempted problem, so the LLM doesn't see m02 during analysis either. The AI vet for submitted activities (lib/ai-vet-activity.ts) DOES see m02 and can legitimately tag external resources targeting fraction addition — this is the one live use. m02 will activate as a diagnostic-triggerable misconception when SM expands to 5.NF.A.1. See docs/research/m02-scope-check-2026-05-15.md for full investigation."
     },
     {
       "id": "m03_fractions_less_than_one",

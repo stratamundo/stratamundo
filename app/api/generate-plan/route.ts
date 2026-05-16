@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import {
   PLAN_ARCHITECT_SYSTEM_PROMPT,
+  buildProgressionsGroundingBlock,
 } from '@/lib/plan-architect-prompt'
 import {
   noPlanNeeded,
@@ -171,6 +172,16 @@ export async function POST(req: NextRequest) {
     .filter(([, v]) => v.state === 'misconception' || v.state === 'working')
     .map(([k]) => k)
 
+  // Prioritized list for Progressions-grounding injection. Order:
+  // misconception first, then working, then (as filler if room) not_assessed.
+  // The buildProgressionsGroundingBlock helper caps to 8 internally.
+  const allStandardEntries = Object.entries(masteryMap.standards ?? {})
+  const groundingPriorityIds = [
+    ...allStandardEntries.filter(([, v]) => v.state === 'misconception').map(([k]) => k),
+    ...allStandardEntries.filter(([, v]) => v.state === 'working').map(([k]) => k),
+    ...allStandardEntries.filter(([, v]) => v.state === 'not_assessed').map(([k]) => k),
+  ]
+
   // Use the problems associated with flagged standards to scope misconceptions.
   // (We don't have per-assessment responses here, so we infer relevant
   // problems from the standard list.)
@@ -223,6 +234,21 @@ ${JSON.stringify(trimmedMisconceptions, null, 2)}
 ## Coherence map subgraph (flagged standards + one-hop prerequisites)
 ${JSON.stringify(trimmedCoherence, null, 2)}`
 
+  // Progressions grounding — verbatim excerpts for the flagged standards
+  // plus the three Progressions-named teaching traps. Pulled from
+  // docs/mapping-kits/<id>/progressions-excerpt.md at request time.
+  // Missing excerpt files are logged + skipped (graceful degrade).
+  // Capped at 8 standards internally to keep the block at ~4–8K tokens.
+  let progressionsGroundingBlock = ''
+  try {
+    progressionsGroundingBlock = await buildProgressionsGroundingBlock(groundingPriorityIds)
+  } catch (err) {
+    console.warn(
+      '[generate-plan] failed to build Progressions grounding block; proceeding without it.',
+      err,
+    )
+  }
+
   const learnerBlock = `# Per-learner data
 
 ## Mastery map
@@ -261,6 +287,15 @@ Return the plan as JSON matching the schema in your system instructions. No mark
               text: dynamicReferenceBlock,
               cache_control: { type: 'ephemeral' },
             },
+            ...(progressionsGroundingBlock
+              ? [
+                  {
+                    type: 'text' as const,
+                    text: progressionsGroundingBlock,
+                    cache_control: { type: 'ephemeral' as const },
+                  },
+                ]
+              : []),
             {
               type: 'text',
               text: learnerBlock,

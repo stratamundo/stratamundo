@@ -12,6 +12,9 @@
  * teach the concept in-app.
  */
 
+import { promises as fs } from 'fs'
+import path from 'path'
+
 export const PLAN_ARCHITECT_SYSTEM_PROMPT = `You are the Plan Architect for Strata, a math mastery diagnostic tool for grade 3–4 fractions used at mastery-based learning environments (microschools, homeschoolers, alternative-ed).
 
 ## Your role
@@ -58,6 +61,15 @@ You receive a learner's completed mastery map (produced by the prior analysis st
 **P9. PhET Build-a-Fraction is a strong practice partner.** When a flagged misconception matches what PhET's mechanic probes (equivalence, comparison, partitioning, addition), include the PhET resource. Include the attribution string (it's in the resource library's metadata).
 
 **P10. Keep the plan short and actionable.** A guide scans this in 2 minutes and acts within the week. Avoid jargon. No academic citations in the plan output — save those for Librarian/research memory.
+
+**P11. Ground rationales in the Progressions when grounding is provided.** A separate "Progressions grounding" reference block in the user message contains VERBATIM excerpts from the CCSS-M Progressions document (Progressions-3-5-Fractions.pdf) for the flagged standards, with page numbers. When you write \`rationale\` or \`rationale_for_this_gap\` for a flagged standard whose excerpt appears in that block, cite the Progressions by page number at least once across the gap (e.g., "Per Progressions p. 8, unit fractions are the building blocks..."). The citation must reflect what the excerpt actually says — do not invent quotes. If no excerpt is provided for a standard, fall back to plain pedagogical language without fabricated citations.
+
+**P12. Avoid the three Progressions-named teaching traps.** The grounding block lists three anti-patterns the Progressions explicitly warns against at grades 3–4:
+  1. Justifying equivalence by "multiplying by 1" (uses fraction multiplication, a grade-5 standard, to explain a grade-3/4 concept).
+  2. Forcing the "proper vs improper" distinction at grade 3 (5/3 is simply five copies of 1/3).
+  3. Requiring simplified/lowest-terms form as a correctness gate (2/4 and 1/2 are equally correct names for the same number).
+
+Do NOT recommend any activity whose stated mechanism is "multiply by n/n to get an equivalent fraction" as a justification for equivalence at grade 3–4 — that is an explicitly discouraged pattern. Prefer activities that use visual repartitioning (area model, tape diagram, number line). Do NOT recommend activities that treat improper fractions as a special harder case or that gate correctness on simplified form. If the only matching resource for a flagged misconception has one of these mechanisms, prefer a different-modality resource that does not.
 
 ## Fractions sections (use these EXACT names — verbatim from Illustrative Mathematics)
 
@@ -208,3 +220,196 @@ ${JSON.stringify(input.prior_plans ?? [], null, 2)}
 
 Return the plan as JSON matching the schema in your system instructions. No markdown fences, no commentary.`
 }
+
+// ----------------------------------------------------------------------
+// Progressions grounding — verbatim excerpts injected at plan-generation
+// time. Pulls from docs/mapping-kits/<standard>/progressions-excerpt.md
+// (the curated, page-numbered Progressions quotes) and stitches them
+// together with the three Progressions-named teaching traps verbatim
+// from the Chesure pedagogy file (pedagogy-toolkit/.../3-4-nf-progressions.md
+// §2 anti-patterns 1–3).
+//
+// The function is intentionally I/O-on-demand (reads files at request
+// time) rather than precomputed at build time, so editing an excerpt
+// doesn't require a rebuild. The output is cached at the Anthropic-API
+// layer via cache_control: ephemeral.
+// ----------------------------------------------------------------------
+
+/** Max number of standard excerpts to embed per plan. ~100–500 words each. */
+const MAX_GROUNDED_STANDARDS = 8
+
+/** Repo-root resolver. The route runs from the Next server cwd. */
+function repoRoot(): string {
+  return process.cwd()
+}
+
+/**
+ * Read a single standard's progressions-excerpt.md and pull out ONLY the
+ * verbatim quote section (between "## Verbatim excerpt" and the next "##"
+ * heading). Returns null if the file is missing or the section can't be
+ * located. Logs a console warning on missing — we degrade gracefully and
+ * skip that standard rather than fail the whole plan.
+ */
+async function readVerbatimExcerpt(standardId: string): Promise<string | null> {
+  const filePath = path.join(
+    repoRoot(),
+    'docs',
+    'mapping-kits',
+    standardId,
+    'progressions-excerpt.md',
+  )
+  let raw: string
+  try {
+    raw = await fs.readFile(filePath, 'utf8')
+  } catch (err) {
+    console.warn(
+      `[plan-architect] progressions excerpt missing for ${standardId} at ${filePath}; skipping. (${(err as Error).message})`,
+    )
+    return null
+  }
+
+  // Extract the section between "## Verbatim excerpt" and the next "## "
+  // heading (or EOF). The structured extraction below it is intentionally
+  // skipped — too verbose for the prompt budget.
+  const startMarker = '## Verbatim excerpt'
+  const startIdx = raw.indexOf(startMarker)
+  if (startIdx === -1) {
+    console.warn(`[plan-architect] no "## Verbatim excerpt" heading in ${filePath}; skipping.`)
+    return null
+  }
+  const afterHeading = raw.slice(startIdx + startMarker.length)
+  const nextHeadingMatch = afterHeading.match(/\n## /)
+  const body = nextHeadingMatch
+    ? afterHeading.slice(0, nextHeadingMatch.index)
+    : afterHeading
+  return body.trim()
+}
+
+/**
+ * The three Progressions-named teaching traps, lifted VERBATIM from
+ * pedagogy-toolkit/agents/chesure-knowledge/3-4-nf-progressions.md §2
+ * anti-patterns 1–3 (lines ~71–93). Verbatim because the Progressions
+ * quotes inside are load-bearing — paraphrasing would lose the citation.
+ */
+const PROGRESSIONS_TEACHING_TRAPS = `### 1. Justifying equivalence via "multiplying by 1" at grades 3–4
+
+The Progressions (p. 12) explicitly warns:
+
+> "Grade 4 students who have learned about fraction multiplication can see equivalence as 'multiplying by 1': 7/9 = (7/9) × 1 = (7/9) × (4/4) = 28/36. However, although a useful mnemonic device, this does not constitute a valid argument at this grade, since students have not yet learned fraction multiplication."
+
+Fraction multiplication is a grade 5 standard (5.NF.B). Using it to justify equivalence at grade 4 is circular — the kid is using a future tool to explain a current concept. The valid argument at grades 3–4 is **visual repartitioning**: partition each piece of an area model, tape diagram, or number line into n smaller equal pieces; observe that you now have n times as many pieces, each n times smaller.
+
+### 2. Forcing the "proper vs improper" distinction at grade 3
+
+The Progressions (p. 8) is direct:
+
+> "In particular there is no need to introduce 'proper fractions' and 'improper fractions' initially; 5/3 is what you get by combining 5 parts when a whole is partitioned into 3 equal parts."
+
+Treating 5/3 as a special, harder case — as something that needs to be "converted to a mixed number" before it is allowed — actively destroys the unit-fraction-as-building-block framing. 5/3 is just five copies of 1/3, the same way 3/4 is three copies of 1/4.
+
+### 3. Requiring simplified form as a correctness gate
+
+The Progressions (p. 12) is again direct:
+
+> "It is possible to over-emphasize the importance of simplifying fractions in this way. There is no mathematical reason why fractions must be written in simplified form, although it may be convenient to do so in some cases."
+
+2/4 and 1/2 are both correct names for the same number. 6/8 is not "wrong" or "incomplete." A game that marks 4/8 as an error when the kid is asked to find a fraction equivalent to 1/2 is teaching the very misconception "fractions must always be in lowest terms."
+`
+
+/**
+ * Build the Progressions grounding block for injection into the Plan
+ * Architect's user-message stack.
+ *
+ * @param standardIds  Pre-prioritized list of CCSS standard IDs flagged
+ *                     in the current mastery map. The CALLER decides
+ *                     priority order (typically: misconception > working
+ *                     > not_assessed). The function takes the first
+ *                     MAX_GROUNDED_STANDARDS and embeds their verbatim
+ *                     excerpts in input order.
+ * @returns            A markdown string suitable for use as a cached user
+ *                     text block. Empty string if no excerpts were
+ *                     successfully read (caller can skip the block).
+ *
+ * Example for input [\"3.NF.A.1\", \"4.NF.A.1\"]:
+ *   # Progressions grounding (verbatim — cite by page number)
+ *   ## 3.NF.A.1
+ *   > Grade 3 students start with unit fractions... (p. 8)
+ *   ## 4.NF.A.1
+ *   > ... (p. 12)
+ *   ## Progressions teaching traps to AVOID at grades 3–4
+ *   ### 1. Justifying equivalence via "multiplying by 1"...
+ *   (full Chesure §2.1–§2.3 verbatim)
+ *   ## Where to read more
+ *   Full pedagogy authority for grade 3–4 NF lives at
+ *   `pedagogy-toolkit/agents/chesure-knowledge/3-4-nf-progressions.md`.
+ */
+export async function buildProgressionsGroundingBlock(
+  standardIds: string[],
+): Promise<string> {
+  // Dedupe while preserving order, then cap at MAX_GROUNDED_STANDARDS.
+  const seen = new Set<string>()
+  const capped: string[] = []
+  for (const id of standardIds) {
+    if (seen.has(id)) continue
+    seen.add(id)
+    capped.push(id)
+    if (capped.length >= MAX_GROUNDED_STANDARDS) break
+  }
+
+  const excerptSections: string[] = []
+  for (const id of capped) {
+    const body = await readVerbatimExcerpt(id)
+    if (!body) continue
+    excerptSections.push(`## ${id}\n\n${body}`)
+  }
+
+  if (excerptSections.length === 0) {
+    // No grounding to add — caller may choose to skip injecting the block
+    // entirely so we don't waste tokens on a header with no content.
+    return ''
+  }
+
+  return `# Progressions grounding (verbatim — cite by page number)
+
+The quotes below are VERBATIM excerpts from the CCSS-M Progressions
+document (Progressions for the Common Core State Standards in
+Mathematics, Grades 3–5 Number and Operations — Fractions). Page
+numbers refer to that document. When you write a rationale for any
+standard listed here, cite the Progressions by page number at least
+once across the gap. Do not invent or paraphrase quotes that aren't
+here.
+
+${excerptSections.join('\n\n')}
+
+## Progressions teaching traps to AVOID at grades 3–4
+
+The Progressions explicitly names these three instructional patterns as
+teaching traps. Do not recommend activities whose mechanism matches any
+of them. Prefer visual-repartitioning approaches (area model, tape
+diagram, number line) over multiplicative "rule" approaches at grades
+3–4.
+
+${PROGRESSIONS_TEACHING_TRAPS}
+
+## Where to read more
+
+Full pedagogy authority for grade 3–4 NF (per-standard misconceptions,
+what-a-good-activity-must-do criteria, good/bad examples) lives at
+\`pedagogy-toolkit/agents/chesure-knowledge/3-4-nf-progressions.md\`.
+This is for your reference; the verbatim grounding above is what you
+cite in plan rationales.
+`
+}
+
+/**
+ * Sanity-check example (manual):
+ *   await buildProgressionsGroundingBlock([
+ *     '3.NF.A.1', '4.NF.A.1', '3.NF.A.3.b',
+ *   ])
+ *
+ * Expected: a string starting with
+ *   "# Progressions grounding (verbatim — cite by page number)"
+ * containing three "## <standard-id>" sections, the three teaching
+ * traps verbatim, and the where-to-read-more footer. Missing excerpt
+ * files are logged via console.warn and silently skipped.
+ */
