@@ -110,6 +110,10 @@ function layerOf(id: string): number {
 
 interface Props {
   masteryMap: MasteryMap | null
+  /** Snapshot of the mastery map at first-analyze time. Used by the diff
+   *  panel to surface what re-probes have changed since this assessment
+   *  was first read. NULL on legacy rows (no snapshot was saved). */
+  masteryMapInitial?: MasteryMap | null
   plan: PlanContent | null
   planId: string | null
   assessmentId: string | null
@@ -121,6 +125,7 @@ interface Props {
 
 export default function MasteryVoyage({
   masteryMap,
+  masteryMapInitial = null,
   plan,
   planId,
   assessmentId,
@@ -166,6 +171,13 @@ export default function MasteryVoyage({
 
       {masteryMap && (
         <StandardsTable masteryMap={masteryMap} />
+      )}
+
+      {masteryMap && masteryMapInitial && (
+        <ProgressSinceFirstReading
+          initial={masteryMapInitial}
+          current={masteryMap}
+        />
       )}
 
       {masteryMap && plan && <ModalityFilter />}
@@ -569,5 +581,160 @@ function BulletedSentences({ text }: { text: string }) {
         <li key={i}>{s}</li>
       ))}
     </ul>
+  )
+}
+
+/* ─────────────────────────  Progress diff panel  ───────────────────────── */
+
+/** Severity rank for a mastery state. Movement from a higher rank toward
+ *  a lower rank is "progress"; the opposite is "regression". */
+function severityRank(state: StandardState): number {
+  switch (state) {
+    case 'misconception':
+      return 3
+    case 'working':
+      return 2
+    case 'not_assessed':
+      return 1
+    case 'demonstrated':
+      return 0
+  }
+}
+
+interface StandardMovement {
+  standardId: string
+  from: StandardState
+  to: StandardState
+  direction: 'progress' | 'regression'
+  clearedMisconceptionNames: string[]
+}
+
+function computeMovements(
+  initial: MasteryMap,
+  current: MasteryMap,
+): StandardMovement[] {
+  const movements: StandardMovement[] = []
+  const allIds = new Set([
+    ...Object.keys(initial.standards ?? {}),
+    ...Object.keys(current.standards ?? {}),
+  ])
+  for (const sid of allIds) {
+    const i = initial.standards?.[sid]
+    const c = current.standards?.[sid]
+    if (!i || !c) continue
+    if (i.state === c.state) continue
+    const direction =
+      severityRank(c.state) < severityRank(i.state) ? 'progress' : 'regression'
+    const initialMids = new Set(i.flagged_misconception_ids ?? [])
+    const currentMids = new Set(c.flagged_misconception_ids ?? [])
+    const clearedMids = [...initialMids].filter((m) => !currentMids.has(m))
+    movements.push({
+      standardId: sid,
+      from: i.state,
+      to: c.state,
+      direction,
+      clearedMisconceptionNames: clearedMids.map((m) => misconceptionName(m)),
+    })
+  }
+  // Progress wins first, then regressions; within each, prerequisites first.
+  return movements.sort((a, b) => {
+    if (a.direction !== b.direction) return a.direction === 'progress' ? -1 : 1
+    return layerOf(a.standardId) - layerOf(b.standardId)
+  })
+}
+
+function ProgressSinceFirstReading({
+  initial,
+  current,
+}: {
+  initial: MasteryMap
+  current: MasteryMap
+}) {
+  const movements = computeMovements(initial, current)
+  if (movements.length === 0) return null
+
+  const progress = movements.filter((m) => m.direction === 'progress')
+  const regressions = movements.filter((m) => m.direction === 'regression')
+
+  return (
+    <section className="rounded-sm border-2 border-brass-deep/40 bg-paper p-5 flex flex-col gap-3">
+      <h2
+        className="text-sm tracking-[0.25em] uppercase text-brass-deep"
+        style={{ fontFamily: 'var(--font-cinzel)' }}
+      >
+        ◇ Progress since first reading ◇
+      </h2>
+      <p
+        className="text-xs text-ink-faint italic -mt-1"
+        style={{ fontFamily: 'var(--font-fraunces)' }}
+      >
+        Re-probes update the picture below. Anything that moved is listed here.
+      </p>
+
+      {progress.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {progress.map((m) => (
+            <MovementRow key={`p-${m.standardId}`} m={m} />
+          ))}
+        </ul>
+      )}
+
+      {regressions.length > 0 && (
+        <>
+          <p
+            className="text-[11px] tracking-[0.2em] uppercase text-ink-faint mt-2"
+            style={{ fontFamily: 'var(--font-cinzel)' }}
+          >
+            Needs another look
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {regressions.map((m) => (
+              <MovementRow key={`r-${m.standardId}`} m={m} />
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  )
+}
+
+function MovementRow({ m }: { m: StandardMovement }) {
+  return (
+    <li
+      className="flex flex-col gap-0.5 rounded-sm border border-brass-deep/25 bg-[oklch(0.98_0.012_78)] px-3 py-2"
+      style={{ fontFamily: 'var(--font-fraunces)' }}
+    >
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span
+          className="text-xs text-brass-deep"
+          style={{ fontFamily: 'var(--font-cinzel)', letterSpacing: '0.1em' }}
+        >
+          {m.standardId}
+        </span>
+        <span className="text-sm text-ink">{standardName(m.standardId)}</span>
+        <span className="text-xs text-ink-faint italic ml-auto">
+          {m.direction === 'progress' ? '▲' : '▼'}{' '}
+          {m.direction === 'progress' ? 'progress' : 'regressed'}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 text-xs text-ink-soft">
+        <span className={`inline-block h-2 w-2 rounded-full ${stateDot(m.from)}`} />
+        <span>{stateLabel(m.from)}</span>
+        <span className="text-ink-faint">→</span>
+        <span className={`inline-block h-2 w-2 rounded-full ${stateDot(m.to)}`} />
+        <span className={stateLabelColor(m.to)}>{stateLabel(m.to)}</span>
+      </div>
+      {m.clearedMisconceptionNames.length > 0 && (
+        <p className="text-xs text-ink-soft mt-0.5">
+          <span
+            className="text-[10px] tracking-[0.18em] uppercase text-brass-deep mr-1.5"
+            style={{ fontFamily: 'var(--font-cinzel)' }}
+          >
+            Cleared:
+          </span>
+          {m.clearedMisconceptionNames.join(' · ')}
+        </p>
+      )}
+    </li>
   )
 }

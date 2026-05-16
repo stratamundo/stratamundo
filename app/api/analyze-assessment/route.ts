@@ -197,9 +197,28 @@ Otherwise set "confidence_overall" to "high".`
     masteryMap = parsed
   }
 
+  // Snapshot the first-analyzed state to mastery_map_initial so the
+  // /learner/[id] diff panel has something to compare against once probes
+  // start mutating mastery_map in place. We only set it when it's still
+  // null AND this is a full assessment — probes don't get a baseline of
+  // their own. Idempotent: if it's already populated, leave it alone.
+  const { data: existingForSnapshot } = await supabase
+    .from('assessments')
+    .select('type, mastery_map_initial')
+    .eq('id', assessmentId)
+    .single()
+  const shouldSnapshot =
+    existingForSnapshot?.type === 'full' &&
+    !existingForSnapshot?.mastery_map_initial
+
+  const updatePayload: Record<string, unknown> = { mastery_map: masteryMap }
+  if (shouldSnapshot) {
+    updatePayload.mastery_map_initial = masteryMap
+  }
+
   const { error: updateError } = await supabase
     .from('assessments')
-    .update({ mastery_map: masteryMap })
+    .update(updatePayload)
     .eq('id', assessmentId)
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })

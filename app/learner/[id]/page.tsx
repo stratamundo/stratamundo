@@ -34,9 +34,13 @@ export default async function LearnerDashboardPage(
   // time), but the probe row itself only knows about the one standard it
   // probed. Showing the probe row directly would shrink the standards
   // table to one row. The parent already has the up-to-date picture.
+  //
+  // We also pull mastery_map_initial — the snapshot saved when this
+  // assessment was first analyzed — so the diff panel can show what
+  // probes have changed since then.
   const { data: assessments } = await supabase
     .from('assessments')
-    .select('id, completed_at, mastery_map, type')
+    .select('id, completed_at, mastery_map, mastery_map_initial, type')
     .eq('learner_id', id)
     .eq('type', 'full')
     .not('completed_at', 'is', null)
@@ -45,6 +49,8 @@ export default async function LearnerDashboardPage(
 
   const latest = assessments?.[0]
   const masteryMap = (latest?.mastery_map as MasteryMap | null) ?? null
+  const masteryMapInitial =
+    (latest?.mastery_map_initial as MasteryMap | null) ?? null
 
   let planContent: PlanContent | null = null
   let planId: string | null = null
@@ -130,6 +136,7 @@ export default async function LearnerDashboardPage(
 
         <MasteryVoyage
           masteryMap={masteryMap}
+          masteryMapInitial={masteryMapInitial}
           plan={planContent}
           planId={planId}
           assessmentId={latest?.id ?? null}
