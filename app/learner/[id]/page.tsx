@@ -124,6 +124,15 @@ export default async function LearnerDashboardPage(
                 month: 'long',
                 day: 'numeric',
               })}
+              {' · '}
+              <a
+                href={`/learner/${learner.id}/print`}
+                className="underline underline-offset-2 hover:text-brass"
+                target="_blank"
+                rel="noreferrer"
+              >
+                printer-friendly version
+              </a>
             </p>
           )}
           {!latest && (
